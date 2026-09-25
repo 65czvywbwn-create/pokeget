@@ -69,10 +69,10 @@ produits:
   # Mets [] pour désactiver. Chaque site peut avoir sa propre valeur.
   doit_contenir: ["pokemon"]
 
-# --- Marketplaces (Amazon, Cdiscount) ------------------------------------
+# --- Marketplaces (Auchan, Leclerc, Cultura, Carrefour) ------------------
 marketplace:
-  # true : n'alerter que si le vendeur est l'enseigne elle-même
-  # (Amazon, Cdiscount), jamais un revendeur tiers.
+  # true : n'alerter que si le vendeur est l'enseigne elle-même,
+  # jamais un revendeur tiers (souvent bien plus cher).
   vendeur_officiel_uniquement: true
 
 # --- Sites surveillés -----------------------------------------------------
@@ -152,11 +152,31 @@ sites:
     actif: true
     intervalle: 60
 
+  # Cultura : aussi une marketplace. Les produits sont lus via l'API
+  # publique de la boutique (celle qu'utilise la page de recherche).
+  # Seules les offres vendues par Cultura comptent avec
+  # vendeur_officiel_uniquement: true.
+  - nom: "Cultura"
+    type: cultura
+    domaine: "www.cultura.com"
+    actif: true
+    intervalle: 60
+
+  # Carrefour : aussi une marketplace. Protégé par Cloudflare : depuis une
+  # connexion de particulier il répond le plus souvent, mais bloque par
+  # moments. pokeget ne contourne pas ce blocage : il fait une pause et
+  # réessaie. D'où un intervalle long (5 min). Ne marche pas depuis un
+  # serveur (voir README).
+  - nom: "Carrefour"
+    type: carrefour
+    domaine: "www.carrefour.fr"
+    actif: true
+    intervalle: 300
+
   # ----- Enseignes NON surveillées (anti-robot) -----
   # Fnac, King Jouet (DataDome), Amazon (AWS WAF), Cdiscount (Baleen),
   # Micromania et Pokémon Center (Imperva) bloquent les programmes
   # automatiques. pokeget ne cherche pas à contourner ces protections.
-  # Carrefour et Cultura (Cloudflare) : adapters à venir.
 
   # ----- Site générique « JSON-LD » (type: jsonld) -----
   # Fonctionne avec beaucoup de sites qui décrivent leurs produits au

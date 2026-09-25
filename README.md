@@ -169,8 +169,8 @@ Un produit déclenche une alerte quand toutes ces conditions sont réunies :
 3. il contient un mot de `doit_contenir` (par défaut « pokemon ») ;
 4. il est **disponible**, ou **en précommande** si `precommande: true` ;
 5. son prix ne dépasse pas le `prix_max` du mot-clé ;
-6. sur une marketplace (Auchan, Leclerc), il est **vendu par l'enseigne
-   elle-même** et non par un revendeur (réglable avec
+6. sur une marketplace (Auchan, Leclerc, Cultura, Carrefour), il est
+   **vendu par l'enseigne elle-même** et non par un revendeur (réglable avec
    `vendeur_officiel_uniquement`).
 
 L'alerte part **une seule fois**, au passage « indisponible → disponible » ou
@@ -222,7 +222,8 @@ Sites actifs (depuis le dernier résumé quotidien) :
   double). Si tu tapes `python3 -m pokeget` alors qu'il tourne déjà en
   arrière-plan, il te le dit et s'arrête.
 * launchd ne fonctionne que lorsque ta session Mac est ouverte.
-* Les messages de démarrage et d'erreur grave vont dans `logs/launchd.log`.
+* Les erreurs graves (plantage, config illisible) vont dans
+  `logs/launchd.log` ; tout le reste est dans `logs/pokeget.log`.
 
 ---
 
@@ -236,14 +237,14 @@ Sites actifs (depuis le dernier résumé quotidien) :
 | Leclerc | `leclerc` | recherche par mot-clé | marketplace ; « Vérifier la disponibilité » = magasin seulement |
 | Philibert | `philibert` | recherche + petite requête de stock par produit | |
 | UltraJeux | `ultrajeux` | catégorie « ETB Coffret Dresseur d'Elite » | lien qui ajoute directement l'article au panier |
+| Cultura | `cultura` | recherche par mot-clé, via l'API publique de la boutique | marketplace ; le stock des magasins (retrait) est ignoré |
+| Carrefour | `carrefour` | recherche par mot-clé | marketplace ; protégé par Cloudflare : répond par moments seulement, d'où un tour toutes les 5 min |
 | Play-In, JouéClub, La Grande Récré | `jsonld` | fiches produit que tu listes | Play-In interdit aux robots sa recherche : fiches uniquement |
 
 **Pas surveillés, volontairement** : Fnac et King Jouet (protection
 DataDome), Amazon (AWS WAF), Cdiscount (Baleen), Micromania et Pokémon
 Center (Imperva). Ces sites bloquent les programmes automatiques et pokeget
-ne cherche pas à contourner leurs protections. **Carrefour et Cultura**
-(Cloudflare) sont en attente : voir [Dépannage](#10-dépannage), dernière
-question.
+ne cherche pas à contourner leurs protections.
 
 Pour les grandes enseignes, pokeget cherche par défaut « pokemon + mot-clé »
 pour chacun de tes mots-clés (ex. « pokemon dresseur d'élite »), puis
@@ -412,15 +413,14 @@ Le site a probablement changé sa présentation : l'adapter doit être mis à
 jour. Lance `python3 -m pokeget sonde https://adresse-de-la-recherche` : la
 page est enregistrée dans le dossier `sondes/`, ce qui permet de corriger.
 
-**Carrefour et Cultura.**
-Depuis un serveur, ces deux sites affichent un défi Cloudflare ; depuis ton
-Mac (connexion de particulier), ils répondaient normalement. Pour coder
-leurs adapters, il faut les pages vues depuis ton Mac :
-```bash
-python3 -m pokeget sonde "https://www.carrefour.fr/s?q=pokemon+dresseur"
-python3 -m pokeget sonde "https://www.cultura.com/search/results?search_query=pokemon+dresseur"
-```
-puis transmettre les fichiers créés dans `sondes/`.
+**Carrefour est souvent « bloqué ».**
+Carrefour est protégé par Cloudflare. Depuis une connexion de particulier,
+il répond une partie du temps et affiche parfois une page de défi. pokeget
+ne la contourne pas : il fait une pause, puis réessaie. Tu reçois alors
+« ⚠️ Carrefour bloqué », puis « ✅ de nouveau accessible ». Si ces messages
+te gênent, augmente son `intervalle` (par exemple 600) ou mets-le en pause
+(`actif: false`). Depuis un serveur (hébergeur, cloud), Carrefour est
+bloqué presque tout le temps.
 
 ---
 
@@ -449,7 +449,9 @@ pokeget/
 │       ├── auchan.py       Auchan
 │       ├── leclerc.py      E.Leclerc
 │       ├── philibert.py    Philibert
-│       └── ultrajeux.py    UltraJeux
+│       ├── ultrajeux.py    UltraJeux
+│       ├── cultura.py      Cultura (API GraphQL publique de la boutique)
+│       └── carrefour.py    Carrefour
 └── tests/                  tests automatiques (sans Internet)
     └── fixtures/           extraits réels des pages des sites, pour les tests
 ```

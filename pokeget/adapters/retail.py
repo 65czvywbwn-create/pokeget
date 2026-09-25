@@ -62,6 +62,9 @@ def slugify(text: str) -> str:
 class RetailerAdapter(Adapter):
     """Adapter « recherche + fiches » pour une grande enseigne."""
 
+    # En-têtes HTTP propres à l'enseigne, envoyés avec chaque requête
+    request_headers: Optional[Dict[str, str]] = None
+
     @property
     def base_url(self) -> str:
         return f"https://{self.domain}"
@@ -82,6 +85,10 @@ class RetailerAdapter(Adapter):
     def pid_from_url(self, url: str) -> str:
         """Identifiant du produit tiré de l'adresse de sa fiche."""
         raise NotImplementedError
+
+    def check_url(self, product: Product) -> str:
+        """Adresse lue pour revérifier un produit (sa fiche, sauf si l'enseigne a mieux)."""
+        return product.url
 
     def default_terms(self) -> List[str]:
         """Recherches par défaut : chaque mot-clé, précédé de « pokemon » s'il n'y est pas."""
@@ -113,7 +120,7 @@ class RetailerAdapter(Adapter):
     async def search(self) -> List[Product]:
         found: Dict[str, Product] = {}
         for term in self.terms:
-            resp = await self.http.get(self.search_url(quote_plus(term)))
+            resp = await self.http.get(self.search_url(quote_plus(term)), headers=self.request_headers)
             for p in self.parse_search(resp.text):
                 found.setdefault(p.key, p)
         return list(found.values())
@@ -122,7 +129,7 @@ class RetailerAdapter(Adapter):
         return await self.search()
 
     async def check(self, product: Product) -> Product:
-        resp = await self.http.get(product.url, allow_404=True)
+        resp = await self.http.get(self.check_url(product), headers=self.request_headers, allow_404=True)
         if resp.status_code == 404:  # fiche supprimée : plus achetable
             product.status = Status.OUT
             return product

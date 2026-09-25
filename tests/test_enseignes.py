@@ -10,12 +10,16 @@ import json
 import re
 import unittest
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
 
 from pokeget.adapters.auchan import AuchanAdapter
+from pokeget.adapters.carrefour import CarrefourAdapter, devalue
+from pokeget.adapters.cultura import CulturaAdapter
 from pokeget.adapters.leclerc import LeclercAdapter
 from pokeget.adapters.monoprix import MonoprixAdapter
 from pokeget.adapters.philibert import PhilibertAdapter, stock_status
 from pokeget.adapters.ultrajeux import UltraJeuxAdapter
+from pokeget.adapters.retail import js_json
 from pokeget.config import SiteConfig
 from pokeget.http import Blocked, HttpClient
 from pokeget.matching import Matcher, Rule
@@ -250,8 +254,217 @@ class UltraJeuxTests(unittest.TestCase):
         self.assertTrue(p.title.startswith("Pokémon - ETB Coffret Dresseur d'Elite - ME2.5"))
 
 
+def flatten(root) -> str:
+    """Inverse de devalue() : réencode des données au format de Carrefour."""
+    flat = []
+
+    def add(v):
+        i = len(flat)
+        flat.append(None)
+        flat[i] = ({k: add(x) for k, x in v.items()} if isinstance(v, dict)
+                   else [add(x) for x in v] if isinstance(v, list) else v)
+        return i
+
+    add(root)
+    return json.dumps(flat)
+
+
+class LocalCarrefour(CarrefourAdapter):
+    @property
+    def base_url(self):
+        return f"http://{self.domain}"
+
+
+class CarrefourTests(unittest.TestCase):
+    def setUp(self):
+        self.a = CarrefourAdapter(site("carrefour", "www.carrefour.fr"), HttpClient(), MATCHER)
+
+    def test_devalue(self):
+        # [racine, …] : les valeurs sont des positions dans le tableau, -1 = vide
+        self.assertEqual(devalue('[{"a":1,"b":2,"c":-1},[3,3],"x",5]'), {"a": [5, 5], "b": "x", "c": None})
+        data = {"data": [{"t": "é", "n": None, "l": [1.5, True]}]}
+        self.assertEqual(devalue(flatten(data)), data)
+
+    def test_search(self):
+        found = {p.pid: p for p in self.a.parse_search(fixture("carrefour_recherche.html"))}
+        self.assertEqual(len(found), 6)
+        victini = found["0196214112612"]  # offre Carrefour (drive / livraison)
+        self.assertEqual((victini.title, victini.status, victini.price, victini.seller, victini.official_seller),
+                         ("Coffret pokémon collection illustration victini ASMODEE", Status.AVAILABLE, 25.99,
+                          "Carrefour", True))
+        self.assertEqual(victini.url, "https://www.carrefour.fr/p/"
+                                      "coffret-pokemon-collection-illustration-victini-asmodee-0196214112612")
+        self.assertEqual(found["0196214139121"].official_seller, True)  # livraison à domicile Carrefour
+        etb = found["3667036169223"]  # revendeur de la marketplace, lien « ?s=6543 » retiré
+        self.assertEqual((etb.status, etb.price, etb.seller, etb.official_seller),
+                         (Status.AVAILABLE, 159.95, "CAVERNE DES JOUETS", False))
+        self.assertNotIn("?", etb.url)
+        self.assertEqual(self.a.pid_from_url(etb.url + "?s=6543"), "3667036169223")
+
+    def test_out_and_preorder(self):
+        # Pas de rupture ni de précommande dans le relevé : on modifie les données d'un vrai produit
+        root = devalue(js_json(fixture("carrefour_recherche.html"), "__INITIAL_STATE__")["routeData"])
+        item = next(i for i in root["data"] if i["attributes"]["ean"] == "0196214112612")
+        offer = next(iter(next(iter(item["attributes"]["offers"].values())).values()))
+        offer["attributes"]["preorder"] = {"releaseDate": "2026-11-07"}
+        self.assertEqual(self.a.product(item).status, Status.PREORDER)
+        offer["attributes"]["availability"]["purchasable"] = False
+        p = self.a.product(item)
+        self.assertEqual((p.status, p.price, p.official_seller), (Status.OUT, 25.99, True))
+
+    def test_product_page(self):
+        url = "https://www.carrefour.fr/p/coffret-pokemon-collection-illustration-victini-asmodee-0196214112612"
+        p = self.a.parse_product(fixture("carrefour_fiche.html"), url)
+        self.assertEqual((p.pid, p.status, p.price, p.seller, p.url), ("0196214112612", Status.AVAILABLE, 25.99,
+                                                                          "Carrefour", url))
+        # Sans l'état JavaScript, repli sur le JSON-LD de la fiche (vendeur « Carrefour Drive »)
+        only_ld = re.sub(r"<script>window.__INITIAL_STATE__.*?</script>", "", fixture("carrefour_fiche.html"))
+        p = self.a.parse_product(only_ld, url)
+        self.assertEqual((p.pid, p.status, p.price, p.seller, p.official_seller),
+                         ("0196214112612", Status.AVAILABLE, 25.99, "Carrefour Drive", True))
+        self.assertIsNone(self.a.parse_product("<html></html>", url))
+
+    def test_search_page_changed(self):
+        with self.assertRaises(RuntimeError):
+            self.a.parse_search("<html>nouvelle version du site</html>")
+
+    def test_poll(self):
+        asyncio.run(self._poll())
+
+    async def _poll(self):
+        web, http = FakeWeb(), HttpClient(gap_s=0)
+        domain = f"127.0.0.1:{web.port}"
+        a = LocalCarrefour(site("carrefour", domain), http, MATCHER)
+        try:
+            # Produit suivi, absent des résultats de recherche : revérifié sur sa fiche
+            page = fixture("carrefour_recherche.html")
+            state = js_json(page, "__INITIAL_STATE__")
+            root = devalue(state["routeData"])
+            root["data"] = [i for i in root["data"] if i["attributes"]["ean"] != "0196214112612"]
+            web.routes["/s"] = (200, "text/html", "<script>window.__INITIAL_STATE__=%s</script>" % json.dumps(
+                {"routeData": flatten(root)}))
+            gone = Product(a.name, "0196214112612", "Coffret pokémon dresseur d'élite",
+                           f"http://{domain}/p/victini-0196214112612", status=Status.OUT)
+            web.routes["/p/victini-0196214112612"] = (200, "text/html", fixture("carrefour_fiche.html"))
+            results = {p.pid: p for p in await a.poll([gone], full=False)}
+            self.assertIn("3667036169223", results)  # « Dresseur D'elite » dans le nom
+            self.assertNotIn("3700891729079", results)  # coussin : aucun mot-clé
+            self.assertEqual(results["0196214112612"].status, Status.AVAILABLE)  # lu sur sa fiche
+        finally:
+            await http.close()
+            web.close()
+
+
+class LocalCultura(CulturaAdapter):
+    """Recherche sur /m2/graphql, vérification d'un produit sur /m2/produit (serveur local)."""
+
+    @property
+    def base_url(self):
+        return f"http://{self.domain}"
+
+    def check_url(self, product):
+        return f"{self.base_url}/m2/produit?pid={product.pid}"
+
+
+class CulturaTests(unittest.TestCase):
+    ETB = "coffret-dresseur-d-elite-pokemon-mega-evolution-equilibre-parfait-12768539"
+
+    def setUp(self):
+        self.a = CulturaAdapter(site("cultura", "www.cultura.com"), HttpClient(), MATCHER)
+
+    def search(self, page=None):
+        return {p.extra["sku"]: p for p in self.a.parse_search(page or fixture("cultura_recherche.json"))}
+
+    def test_search(self):
+        found = self.search()
+        self.assertEqual(len(found), 6)
+        etb = found["12768539"]  # « indisponible en ligne » (seul un magasin l'a : ignoré)
+        self.assertEqual((etb.pid, etb.title, etb.status, etb.price, etb.seller, etb.official_seller),
+                         (self.ETB, "Coffret Dresseur d'élite Pokémon : Méga-Evolution Equilibre parfait",
+                          Status.OUT, 59.99, "Cultura", True))
+        self.assertEqual(etb.url, f"https://www.cultura.com/p-{self.ETB}.html")
+        lego = found["13045094"]  # « en stock Cultura »
+        self.assertEqual((lego.status, lego.price, lego.official_seller), (Status.AVAILABLE, 3.99, True))
+        self.assertEqual(found["1734415"].status, Status.AVAILABLE)  # « disponible sous 6 jours »
+
+    def test_marketplace(self):
+        found = self.search()
+        # Cultura en rupture, mais un revendeur le vend neuf : disponible chez un vendeur tiers
+        old = found["4152340"]
+        self.assertEqual((old.status, old.price, old.seller, old.official_seller),
+                         (Status.AVAILABLE, 329.95, "Troc cash and Game", False))
+        # Offre d'occasion seulement : ne compte pas
+        data = json.loads(fixture("cultura_recherche.json"))
+        item = next(i for i in data["data"]["products"]["items"] if i["sku"] == "4152340")
+        item["mp_info"]["offers"][0]["state_code"] = 1
+        self.assertEqual(self.search(json.dumps(data))["4152340"].status, Status.OUT)
+
+    def test_preorder(self):
+        # Aucune précommande réelle au moment du relevé : on modifie la valeur d'un vrai produit
+        data = json.loads(fixture("cultura_recherche.json"))
+        items = {i["sku"]: i for i in data["data"]["products"]["items"]}
+        items["12768539"]["stock_item_extra"]["front_availability"] = "available_preorder"
+        items["13045094"]["stock_item_extra"]["front_availability"] = "mag_only"  # exclu. magasin
+        found = self.search(json.dumps(data))
+        self.assertEqual((found["12768539"].status, found["12768539"].official_seller), (Status.PREORDER, True))
+        self.assertEqual(found["13045094"].status, Status.OUT)
+
+    def test_urls(self):
+        url = self.a.search_url("pokemon+dresseur+d%27%C3%A9lite")
+        self.assertTrue(url.startswith("https://www.cultura.com/m2/graphql?query="))
+        variables = json.loads(parse_qs(urlsplit(url).query)["variables"][0])
+        self.assertEqual(variables["search"], "pokemon dresseur d'élite")
+        self.assertEqual(self.a.pid_from_url(f"https://www.cultura.com/p-{self.ETB}.html?x=1"), self.ETB)
+        check = Product("Cultura", self.ETB, "t", f"https://www.cultura.com/p-{self.ETB}.html")
+        variables = json.loads(parse_qs(urlsplit(self.a.check_url(check)).query)["variables"][0])
+        self.assertEqual(variables["filter"]["url_key"], {"eq": self.ETB})
+        self.assertEqual(self.a.request_headers, {"Store": "cultura_b2c_fr_FR"})
+
+    def test_product(self):
+        url = f"https://www.cultura.com/p-{self.ETB}.html"
+        p = self.a.parse_product(fixture("cultura_produit.json"), url)
+        self.assertEqual((p.pid, p.status, p.price, p.seller), (self.ETB, Status.OUT, 59.99, "Cultura"))
+        # Réponse qui ne contient pas ce produit (supprimé) : illisible
+        self.assertIsNone(self.a.parse_product(fixture("cultura_produit.json"), "https://www.cultura.com/p-x.html"))
+
+    def test_api_changed(self):
+        with self.assertRaises(RuntimeError):
+            self.a.parse_search('{"errors": [{"message": "exists operator not supported"}], "data": {"products": null}}')
+        with self.assertRaises(RuntimeError):
+            self.a.parse_search("<html>nouvelle version du site</html>")
+
+    def test_poll(self):
+        asyncio.run(self._poll())
+
+    async def _poll(self):
+        web, http = FakeWeb(), HttpClient(gap_s=0)
+        domain = f"127.0.0.1:{web.port}"
+        a = LocalCultura(site("cultura", domain), http, MATCHER)
+        try:
+            web.routes["/m2/graphql"] = (200, "application/json", fixture("cultura_recherche.json"))
+            web.routes["/m2/produit"] = (200, "application/json", fixture("cultura_produit.json"))
+            # Produit suivi, absent des résultats de recherche : revérifié via l'API
+            data = json.loads(fixture("cultura_recherche.json"))
+            data["data"]["products"]["items"] = [i for i in data["data"]["products"]["items"]
+                                                 if i["sku"] != "12768539"]
+            web.routes["/m2/graphql"] = (200, "application/json", json.dumps(data))
+            gone = Product(a.name, self.ETB, "Coffret Dresseur d'élite Pokémon", f"http://{domain}/p-{self.ETB}.html",
+                           status=Status.AVAILABLE)
+            results = {p.pid: p for p in await a.poll([gone], full=False)}
+            self.assertEqual(results[self.ETB].status, Status.OUT)
+            self.assertEqual(results[self.ETB].title,
+                             "Coffret Dresseur d'élite Pokémon : Méga-Evolution Equilibre parfait")
+            # « dresseur d'élite » : le vieux coffret vendu 329,95 € par un revendeur est retenu (le prix
+            # max et le vendeur sont jugés ensuite par le moteur), les produits sans mot-clé non
+            self.assertIn("pokemon-coffret-dresseur-d-elite-0820650554384", results)
+            self.assertNotIn("lego-30730-l-equipement-du-dresseur-lego-pokemon-13045094", results)
+        finally:
+            await http.close()
+            web.close()
+
+
 class BlockDetectionTests(unittest.TestCase):
-    """Pages anti-robot reçues avec un code « normal » (relevées sur Amazon et Cdiscount)."""
+    """Pages anti-robot, parfois avec un code « normal » (relevées sur Amazon, Cdiscount et Carrefour)."""
 
     PAGES = {
         "/amazon": (202, "<html><head><script>window.awsWafCookieDomainList = []; window.gokuProps = {};"
@@ -259,6 +472,10 @@ class BlockDetectionTests(unittest.TestCase):
         "/cdiscount": (200, "<!doctype html><html><head><title>Cdiscount</title><script>"
                             "var __blnChallengeStore={\"checkChallengeParams\":{\"request_fate\":\"challengejs\"}}"
                             "</script></head></html>"),
+        "/carrefour": (429, "<!DOCTYPE html><html><head><title>Carrefour</title></head><body><script>"
+                            "(function(){window._cf_chl_opt={cvId: '3'};})();</script></body></html>"),
+        "/carrefour200": (200, "<html><head><title>Carrefour</title></head><body><script>"
+                               "window._cf_chl_opt={cType: 'managed'};</script></body></html>"),
         "/normal": (200, fixture("monoprix_fiche.html")),
     }
 
@@ -271,7 +488,7 @@ class BlockDetectionTests(unittest.TestCase):
             web.routes[path] = (code, "text/html; charset=utf-8", body)
         base = f"http://127.0.0.1:{web.port}"
         try:
-            for path in ("/amazon", "/cdiscount"):
+            for path in ("/amazon", "/cdiscount", "/carrefour", "/carrefour200"):
                 http = HttpClient(gap_s=0)
                 with self.assertRaises(Blocked, msg=path):
                     await http.get(base + path)

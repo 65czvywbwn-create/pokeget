@@ -1,0 +1,293 @@
+{
+ "data": {
+  "products": {
+   "total_count": 38,
+   "items": [
+    {
+     "sku": "12317440",
+     "name": "Pokémon Dresseur Mission - Pokémon - Bandai",
+     "url_key": "pokemon-dresseur-mission-pokemon-bandai-12317440",
+     "type_id": "simple",
+     "release_date": "2026-09-25 23:01:27",
+     "main_flag": {
+      "label": null,
+      "value": null
+     },
+     "price_range": {
+      "minimum_price": {
+       "final_price": {
+        "value": 34.65,
+        "currency": "EUR"
+       }
+      }
+     },
+     "stock_item_extra": {
+      "front_availability": "unavailable",
+      "availability_date": null,
+      "order_delay": null,
+      "offer": []
+     },
+     "mp_info": {
+      "offers": [
+       {
+        "offer_id": 14096815,
+        "shop": {
+         "name": "easykado",
+         "id": 2283,
+         "url_key": "65e1aade59db6-2283"
+        },
+        "price": 34.65,
+        "state_code": 11
+       },
+       {
+        "offer_id": 19895415,
+        "shop": {
+         "name": "DEUZIO (Petite Marelle)",
+         "id": 2323,
+         "url_key": "660582a17d3a2-2323"
+        },
+        "price": 20,
+        "state_code": 2
+       }
+      ],
+      "total_new": 2,
+      "total_used": 1
+     }
+    },
+    {
+     "sku": "4152340",
+     "name": "Pokémon Coffret dresseur d'élite",
+     "url_key": "pokemon-coffret-dresseur-d-elite-0820650554384",
+     "type_id": "simple",
+     "release_date": "2022-03-18 01:00:00",
+     "main_flag": {
+      "label": null,
+      "value": null
+     },
+     "price_range": {
+      "minimum_price": {
+       "final_price": {
+        "value": 59.99,
+        "currency": "EUR"
+       }
+      }
+     },
+     "stock_item_extra": {
+      "front_availability": "unavailable",
+      "availability_date": null,
+      "order_delay": null,
+      "offer": []
+     },
+     "mp_info": {
+      "offers": [
+       {
+        "offer_id": 23277723,
+        "shop": {
+         "name": "Troc cash and Game",
+         "id": 2383,
+         "url_key": "6673e0a8773d3-2383"
+        },
+        "price": 329.95,
+        "state_code": 11
+       }
+      ],
+      "total_new": 1,
+      "total_used": null
+     }
+    },
+    {
+     "sku": "10349190",
+     "name": "Coffret Pokémon - Dresseur d'élite Ecarlate et Violet EV06",
+     "url_key": "coffret-pokemon-dresseur-d-elite-ecarlate-et-violet-ev06-10349190",
+     "type_id": "simple",
+     "release_date": "2024-05-24 02:00:00",
+     "main_flag": {
+      "label": null,
+      "value": null
+     },
+     "price_range": {
+      "minimum_price": {
+       "final_price": {
+        "value": 59.99,
+        "currency": "EUR"
+       }
+      }
+     },
+     "stock_item_extra": {
+      "front_availability": "unavailable",
+      "availability_date": null,
+      "order_delay": null,
+      "offer": [
+       {
+        "front_availability": "available",
+        "seller_code": "C4T",
+        "qty": 10000
+       },
+       {
+        "front_availability": "available",
+        "seller_code": "CAG",
+        "qty": 10000
+       }
+      ]
+     },
+     "mp_info": {
+      "offers": [
+       {
+        "offer_id": 23025681,
+        "shop": {
+         "name": "Réseau EuroShop",
+         "id": 2401,
+         "url_key": "66bf55db33221-2401"
+        },
+        "price": 138.36,
+        "state_code": 11
+       }
+      ],
+      "total_new": 1,
+      "total_used": null
+     }
+    },
+    {
+     "sku": "1734415",
+     "name": "Pokémon : un nouveau dresseur",
+     "url_key": "pokemon-un-nouveau-dresseur-9782012027749",
+     "type_id": "simple",
+     "release_date": "2012-09-12 02:00:00",
+     "main_flag": {
+      "label": "best_sales",
+      "value": null
+     },
+     "price_range": {
+      "minimum_price": {
+       "final_price": {
+        "value": 5.9,
+        "currency": "EUR"
+       }
+      }
+     },
+     "stock_item_extra": {
+      "front_availability": "available_within_x_days",
+      "availability_date": null,
+      "order_delay": 6,
+      "offer": [
+       {
+        "front_availability": "available",
+        "seller_code": "C4T",
+        "qty": 10000
+       },
+       {
+        "front_availability": "available",
+        "seller_code": "CAB",
+        "qty": 10000
+       }
+      ]
+     },
+     "mp_info": {
+      "offers": [
+       {
+        "offer_id": 15198298,
+        "shop": {
+         "name": "Recyclivre",
+         "id": 2002,
+         "url_key": "648b2079688bf-2002"
+        },
+        "price": 1.79,
+        "state_code": 1
+       }
+      ],
+      "total_new": null,
+      "total_used": 25
+     }
+    },
+    {
+     "sku": "13045094",
+     "name": "LEGO 30730 - L’équipement du Dresseur - LEGO Pokémon",
+     "url_key": "lego-30730-l-equipement-du-dresseur-lego-pokemon-13045094",
+     "type_id": "simple",
+     "release_date": "2026-08-01 00:00:00",
+     "main_flag": {
+      "label": "novelty",
+      "value": null
+     },
+     "price_range": {
+      "minimum_price": {
+       "final_price": {
+        "value": 3.99,
+        "currency": "EUR"
+       }
+      }
+     },
+     "stock_item_extra": {
+      "front_availability": "available",
+      "availability_date": null,
+      "order_delay": null,
+      "offer": [
+       {
+        "front_availability": "available",
+        "seller_code": "C4T",
+        "qty": 10000
+       },
+       {
+        "front_availability": "available",
+        "seller_code": "CAB",
+        "qty": 10000
+       }
+      ]
+     },
+     "mp_info": {
+      "offers": [
+       {
+        "offer_id": 23482401,
+        "shop": {
+         "name": "BricksDirect",
+         "id": 2427,
+         "url_key": "6718f478f1a2f-2427"
+        },
+        "price": 5.99,
+        "state_code": 11
+       }
+      ],
+      "total_new": 3,
+      "total_used": null
+     }
+    },
+    {
+     "sku": "12768539",
+     "name": "Coffret Dresseur d'élite Pokémon : Méga-Evolution Equilibre parfait",
+     "url_key": "coffret-dresseur-d-elite-pokemon-mega-evolution-equilibre-parfait-12768539",
+     "type_id": "simple",
+     "release_date": "2026-03-27 00:00:00",
+     "main_flag": {
+      "label": null,
+      "value": null
+     },
+     "price_range": {
+      "minimum_price": {
+       "final_price": {
+        "value": 59.99,
+        "currency": "EUR"
+       }
+      }
+     },
+     "stock_item_extra": {
+      "front_availability": "unavailable",
+      "availability_date": null,
+      "order_delay": null,
+      "offer": [
+       {
+        "front_availability": "available",
+        "seller_code": "CMR",
+        "qty": 10000
+       }
+      ]
+     },
+     "mp_info": {
+      "offers": [],
+      "total_new": null,
+      "total_used": null
+     }
+    }
+   ]
+  }
+ }
+}
