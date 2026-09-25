@@ -41,6 +41,10 @@ def setup_logging(verbose: bool = False, to_file: bool = True) -> None:
     root.setLevel(logging.DEBUG if verbose else logging.INFO)
     console = logging.StreamHandler(sys.stdout)
     console.setFormatter(fmt)
+    if to_file and not sys.stdout.isatty():
+        # En arrière-plan (launchd), la sortie va dans logs/launchd.log, jamais découpé :
+        # seulement les erreurs, le détail est déjà dans pokeget.log.
+        console.setLevel(logging.ERROR)
     root.addHandler(console)
     if to_file:
         LOG_DIR.mkdir(exist_ok=True)
