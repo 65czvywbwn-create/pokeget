@@ -7,6 +7,7 @@ from typing import Dict, Type
 from pokeget.adapters.auchan import AuchanAdapter
 from pokeget.adapters.base import Adapter
 from pokeget.adapters.jsonld import JsonLdAdapter
+from pokeget.adapters.leclerc import LeclercAdapter
 from pokeget.adapters.monoprix import MonoprixAdapter
 from pokeget.adapters.shopify import ShopifyAdapter
 
@@ -15,6 +16,7 @@ ADAPTERS: Dict[str, Type[Adapter]] = {
     "jsonld": JsonLdAdapter,
     "monoprix": MonoprixAdapter,
     "auchan": AuchanAdapter,
+    "leclerc": LeclercAdapter,
 }
 
 

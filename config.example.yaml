@@ -133,6 +133,13 @@ sites:
     actif: true
     retrait_magasin: false
 
+  # Leclerc : aussi une marketplace (« Vendu par E.Leclerc » ou revendeur).
+  # Les produits « Vérifier la disponibilité » ne sont qu'en magasin.
+  - nom: "Leclerc"
+    type: leclerc
+    domaine: "www.e.leclerc"
+    actif: true
+
   # ----- Site générique « JSON-LD » (type: jsonld) -----
   # Fonctionne avec beaucoup de sites qui décrivent leurs produits au
   # format schema.org. On liste les fiches produit à surveiller :

@@ -11,6 +11,7 @@ import unittest
 from pathlib import Path
 
 from pokeget.adapters.auchan import AuchanAdapter
+from pokeget.adapters.leclerc import LeclercAdapter
 from pokeget.adapters.monoprix import MonoprixAdapter
 from pokeget.config import SiteConfig
 from pokeget.http import Blocked, HttpClient
@@ -139,6 +140,37 @@ class AuchanTests(unittest.TestCase):
         self.assertEqual(engine.evaluate(a, p).note, "vendeur tiers (Multishop)")
         p.official_seller, p.seller = True, "Auchan"
         self.assertTrue(engine.evaluate(a, p).eligible)
+
+
+class LeclercTests(unittest.TestCase):
+    def setUp(self):
+        self.a = LeclercAdapter(site("leclerc", "www.e.leclerc"), HttpClient(), MATCHER)
+
+    def test_search(self):
+        found = {p.pid: p for p in self.a.parse_search(fixture("leclerc_recherche.html"))}
+        self.assertEqual(len(found), 4)
+        lego = found["5702018067987"]  # le numéro « 72156 » du titre n'est pas pris pour le prix
+        self.assertEqual((lego.status, lego.price, lego.seller, lego.official_seller),
+                         (Status.AVAILABLE, 24.99, "E.Leclerc", True))
+        etb = found["0196214139961"]
+        self.assertEqual((etb.title, etb.status, etb.price, etb.seller, etb.official_seller),
+                         ("Pokémon ME04 : coffret Dresseur d'Elite", Status.AVAILABLE, 123.17, "Stock e-commerce",
+                          False))
+        self.assertEqual(etb.url, "https://www.e.leclerc/fp/pokemon-me04-coffret-dresseur-d-elite-0196214139961")
+        self.assertEqual(self.a.pid_from_url(etb.url + "?offerId=228480473"), "0196214139961")
+        # « Vérifier la disponibilité » : magasin seulement, pas achetable en ligne
+        self.assertEqual(found["0194735275885"].status, Status.OUT)
+        self.assertEqual(found["8056379198024"].status, Status.OUT)
+
+    def test_product_pages(self):
+        url = "https://www.e.leclerc/fp/x-0196214139961"
+        p = self.a.parse_product(fixture("leclerc_fiche_revendeur.html"), url)
+        self.assertEqual((p.pid, p.status, p.price, p.seller, p.official_seller),
+                         ("0196214139961", Status.AVAILABLE, 123.17, "Stock e-commerce", False))
+        p = self.a.parse_product(fixture("leclerc_fiche_officiel.html"), url)
+        self.assertEqual((p.status, p.price, p.official_seller), (Status.AVAILABLE, 29.99, True))
+        p = self.a.parse_product(fixture("leclerc_fiche_magasin.html"), url)
+        self.assertEqual((p.title, p.status), ("POKEMON Mug Dresseur", Status.OUT))
 
 
 class BlockDetectionTests(unittest.TestCase):
