@@ -7,6 +7,7 @@
   python3 -m pokeget sonde [URL]     examine les grandes enseignes (ou une adresse)
   python3 -m pokeget installer       démarrage automatique sur Mac (launchd)
   python3 -m pokeget desinstaller    retire le démarrage automatique
+  python3 -m pokeget redemarrer      relance pokeget en arrière-plan (après modif. de config.yaml)
   python3 -m pokeget statut          pokeget tourne-t-il ? dernier signe de vie
   python3 -m pokeget                 lance la surveillance en continu
 """
@@ -165,6 +166,22 @@ def cmd_installer(args) -> None:
     print("   Tu peux fermer le Terminal. Vérifie dans 1 minute avec : python3 -m pokeget statut")
 
 
+def cmd_redemarrer(args) -> None:
+    from pokeget import service
+
+    if not service.is_loaded():
+        print("Le démarrage automatique n'est pas installé : arrête pokeget avec Ctrl + C dans sa fenêtre,\n"
+              "puis relance-le avec : python3 -m pokeget")
+        return
+    load_or_exit(args.config)  # ne relance pas avec une configuration invalide
+    try:
+        service.restart()
+    except RuntimeError as exc:
+        print(f"❌ {exc}")
+        sys.exit(1)
+    print("✅ pokeget redémarré avec la nouvelle configuration.")
+
+
 def cmd_desinstaller(args) -> None:
     from pokeget import service
 
@@ -288,8 +305,9 @@ def main(argv=None) -> None:
     parser = argparse.ArgumentParser(prog="pokeget", description="Surveillance de stock Pokémon TCG")
     parser.add_argument("commande", nargs="?", default="run",
                         choices=["run", "init", "test", "once", "verifier", "sonde", "installer",
-                                 "desinstaller", "statut"],
-                        help="run (défaut), init, test, once, verifier, sonde, installer, desinstaller, statut")
+                                 "desinstaller", "redemarrer", "statut"],
+                        help="run (défaut), init, test, once, verifier, sonde, installer, desinstaller, "
+                             "redemarrer, statut")
     parser.add_argument("url", nargs="?", help="adresse à analyser (commande verifier)")
     parser.add_argument("--once", action="store_true", help="identique à la commande « once »")
     parser.add_argument("--test", action="store_true", help="identique à la commande « test »")
@@ -302,4 +320,5 @@ def main(argv=None) -> None:
         parser.error("indique une adresse : python3 -m pokeget verifier https://boutique.fr")
     {"run": cmd_run, "init": cmd_init, "test": cmd_test, "once": cmd_once, "verifier": cmd_verifier,
      "sonde": cmd_sonde, "installer": cmd_installer, "desinstaller": cmd_desinstaller,
+     "redemarrer": cmd_redemarrer,
      "statut": cmd_statut}[command](args)

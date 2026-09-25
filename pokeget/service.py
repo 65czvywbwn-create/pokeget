@@ -93,6 +93,13 @@ def install(python: str, root: Path) -> None:
         raise RuntimeError(f"launchctl bootstrap a échoué ({code}) : {out}")
 
 
+def restart() -> None:
+    """Arrête puis relance pokeget (pour prendre en compte une nouvelle config.yaml)."""
+    code, out = _launchctl("kickstart", "-k", f"{_domain()}/{LABEL}")
+    if code != 0:
+        raise RuntimeError(f"launchctl kickstart a échoué ({code}) : {out}")
+
+
 def uninstall() -> bool:
     """Arrête et retire l'agent. Renvoie False s'il n'était pas installé."""
     existed = PLIST_PATH.exists() or is_loaded()
