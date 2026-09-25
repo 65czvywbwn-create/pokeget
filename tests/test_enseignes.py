@@ -6,6 +6,7 @@ Lancer : python3 -m unittest discover -s tests -v
 from __future__ import annotations
 
 import asyncio
+import json
 import re
 import unittest
 from pathlib import Path
@@ -13,6 +14,7 @@ from pathlib import Path
 from pokeget.adapters.auchan import AuchanAdapter
 from pokeget.adapters.leclerc import LeclercAdapter
 from pokeget.adapters.monoprix import MonoprixAdapter
+from pokeget.adapters.philibert import PhilibertAdapter, stock_status
 from pokeget.config import SiteConfig
 from pokeget.http import Blocked, HttpClient
 from pokeget.matching import Matcher, Rule
@@ -171,6 +173,58 @@ class LeclercTests(unittest.TestCase):
         self.assertEqual((p.status, p.price, p.official_seller), (Status.AVAILABLE, 29.99, True))
         p = self.a.parse_product(fixture("leclerc_fiche_magasin.html"), url)
         self.assertEqual((p.title, p.status), ("POKEMON Mug Dresseur", Status.OUT))
+
+
+class LocalPhilibert(PhilibertAdapter):
+    @property
+    def base_url(self):
+        return f"http://{self.domain}"
+
+
+class PhilibertTests(unittest.TestCase):
+    def test_stock_status(self):
+        stock = json.loads(fixture("philibert_stock.json"))
+        self.assertEqual(stock_status(stock["177321"]), Status.AVAILABLE)   # in_stock
+        self.assertEqual(stock_status(stock["174868"]), Status.OUT)         # out_of_stock
+        self.assertEqual(stock_status(stock["183080"]), Status.OUT)         # comingSoon (à venir)
+        self.assertEqual(stock_status({"status": "preorder"}), Status.PREORDER)
+        self.assertEqual(stock_status({"status": "???", "after_price_html": "<button>Précommander</button>"}),
+                         Status.PREORDER)
+        self.assertEqual(stock_status({"status": "nouveau"}), Status.UNKNOWN)
+
+    def test_search(self):
+        a = PhilibertAdapter(site("philibert", "www.philibertnet.com"), HttpClient(), MATCHER)
+        found = {p.pid: p for p in a.parse_search(fixture("philibert_recherche.html"))}
+        self.assertEqual(set(found), {"174868", "165818", "171427", "183080"})
+        etb = found["174868"]
+        self.assertEqual((etb.title, etb.price, etb.status),
+                         ("Pokémon ME04 Chaos Ascendant - Coffret Dresseur d'Élite", 69.95, Status.UNKNOWN))
+        self.assertIsNone(found["183080"].price)  # « à venir » : pas encore de prix affiché
+
+    def test_poll(self):
+        asyncio.run(self._poll())
+
+    async def _poll(self):
+        web, http = FakeWeb(), HttpClient(gap_s=0)
+        domain = f"127.0.0.1:{web.port}"
+        stock = json.loads(fixture("philibert_stock.json"))
+        a = LocalPhilibert(site("philibert", domain, fiches=[f"http://{domain}/fr/pokemon/183080-mini-tin.html"]),
+                           http, MATCHER)
+        try:
+            web.routes["/fr/recherche"] = (200, "text/html", fixture("philibert_recherche.html"))
+            web.routes["/fr/pokemon/183080-mini-tin.html"] = (200, "text/html", fixture("philibert_fiche.html"))
+            for pid, data in (("174868", "174868"), ("165818", "174868"), ("171427", "177321"),
+                              ("183080", "183080")):
+                web.json(f"/fr/ajax/product/{pid}/0/expedition_date", stock[data])
+            results = {p.pid: p for p in await a.poll([], full=True)}
+            self.assertEqual({k: p.status for k, p in results.items()},
+                             {"174868": Status.OUT, "165818": Status.OUT, "171427": Status.AVAILABLE,
+                              "183080": Status.OUT})
+            self.assertTrue(results["183080"].forced)
+            self.assertEqual(results["171427"].price, 69.95)
+        finally:
+            await http.close()
+            web.close()
 
 
 class BlockDetectionTests(unittest.TestCase):

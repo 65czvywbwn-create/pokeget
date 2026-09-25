@@ -57,6 +57,8 @@ produits:
   # est ignoré, même s'il contient un mot-clé à inclure.
   exclure:
     - "occasion"
+    - "descellée"
+    - "abîmée"
     - "sleeve"
     - "protège-cartes"
     - "classeur"
@@ -139,6 +141,14 @@ sites:
     type: leclerc
     domaine: "www.e.leclerc"
     actif: true
+
+  # Philibert : le stock de chaque produit intéressant est lu séparément
+  # (petite requête), d'où un intervalle un peu plus long.
+  - nom: "Philibert"
+    type: philibert
+    domaine: "www.philibertnet.com"
+    actif: true
+    intervalle: 75
 
   # ----- Site générique « JSON-LD » (type: jsonld) -----
   # Fonctionne avec beaucoup de sites qui décrivent leurs produits au
