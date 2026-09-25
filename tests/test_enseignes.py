@@ -10,6 +10,7 @@ import re
 import unittest
 from pathlib import Path
 
+from pokeget.adapters.auchan import AuchanAdapter
 from pokeget.adapters.monoprix import MonoprixAdapter
 from pokeget.config import SiteConfig
 from pokeget.http import Blocked, HttpClient
@@ -90,6 +91,54 @@ class MonoprixTests(unittest.TestCase):
         finally:
             await http.close()
             web.close()
+
+
+class AuchanTests(unittest.TestCase):
+    def adapter(self, **raw):
+        return AuchanAdapter(site("auchan", "www.auchan.fr", **raw), HttpClient(), MATCHER)
+
+    def test_search(self):
+        found = {p.pid: p for p in self.adapter().parse_search(fixture("auchan_recherche.html"))}
+        self.assertEqual(len(found), 4)
+        etb = found["C1855278"]
+        self.assertEqual((etb.title, etb.status, etb.price, etb.seller, etb.official_seller),
+                         ("POKEMON Coffret Dresseur d'Élite Héros Transcendant", Status.AVAILABLE, 178.36,
+                          "Multishop", False))
+        self.assertEqual(etb.url, "https://www.auchan.fr/pokemon-coffret-dresseur-d-elite-heros-transcendant"
+                                  "/pr-C1855278")
+        self.assertEqual((found["C1778480"].status, found["C1778480"].official_seller), (Status.OUT, True))
+        self.assertEqual(found["C1315783"].seller, "1001Jouets")  # plusieurs revendeurs : le moins cher
+        # Offre « retrait magasin » : ignorée par défaut, retenue avec retrait_magasin: true
+        self.assertEqual(found["C1844399"].status, Status.OUT)
+        pickup = {p.pid: p for p in self.adapter(retrait_magasin=True).parse_search(fixture("auchan_recherche.html"))}
+        self.assertEqual((pickup["C1844399"].status, pickup["C1844399"].seller), (Status.AVAILABLE, "Auchan"))
+
+    def test_default_terms(self):
+        self.assertEqual(self.adapter().terms, ["pokemon 30e anniversaire", "pokemon dresseur d'élite"])
+
+    def test_product_pages(self):
+        p = self.adapter().parse_product(fixture("auchan_fiche_revendeur.html"), "https://www.auchan.fr/x/pr-C1855278")
+        self.assertEqual((p.pid, p.status, p.price, p.seller, p.official_seller),
+                         ("C1855278", Status.AVAILABLE, 178.36, "Multishop", False))
+        p = self.adapter().parse_product(fixture("auchan_fiche_rupture.html"), "https://www.auchan.fr/x/pr-C1778480")
+        self.assertEqual((p.title, p.status, p.seller), ("Lot de 4 Dresseurs Type Feu à construire", Status.OUT,
+                                                         "Auchan"))
+
+    def test_marketplace_filter(self):
+        from pokeget.engine import Engine
+
+        class Cfg:  # juste ce qu'utilise Engine.evaluate
+            alert_preorder = True
+            official_seller_only = True
+
+        engine = Engine.__new__(Engine)
+        engine.cfg, engine.matcher = Cfg(), MATCHER
+        a = self.adapter()
+        p = Product(a.name, "1", "Pokémon Coffret Dresseur d'Élite", "u", price=59.99, status=Status.AVAILABLE,
+                    seller="Multishop", official_seller=False)
+        self.assertEqual(engine.evaluate(a, p).note, "vendeur tiers (Multishop)")
+        p.official_seller, p.seller = True, "Auchan"
+        self.assertTrue(engine.evaluate(a, p).eligible)
 
 
 class BlockDetectionTests(unittest.TestCase):

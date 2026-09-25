@@ -123,6 +123,16 @@ sites:
     actif: true
     intervalle: 45
 
+  # Auchan : aussi une marketplace. Avec vendeur_officiel_uniquement: true,
+  # seules les offres « Vendu par Auchan » déclenchent une alerte.
+  # retrait_magasin: true -> compte aussi les offres « retrait en magasin »
+  # (leur stock dépend du magasin choisi sur le site : moins fiable).
+  - nom: "Auchan"
+    type: auchan
+    domaine: "www.auchan.fr"
+    actif: true
+    retrait_magasin: false
+
   # ----- Site générique « JSON-LD » (type: jsonld) -----
   # Fonctionne avec beaucoup de sites qui décrivent leurs produits au
   # format schema.org. On liste les fiches produit à surveiller :
