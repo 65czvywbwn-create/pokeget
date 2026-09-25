@@ -80,7 +80,7 @@ marketplace:
 #   actif      : true pour surveiller, false pour mettre en pause
 #   intervalle : secondes entre deux vérifications (±20 % aléatoire).
 #                Sans cette ligne, une valeur par défaut raisonnable
-#                est utilisée (Shopify 20 s, grandes enseignes 45-60 s,
+#                est utilisée (Shopify 20 s, grandes enseignes 50 s,
 #                Amazon 75 s).
 sites:
 
@@ -106,6 +106,22 @@ sites:
     type: shopify
     domaine: "shop-tcg.fr"
     actif: false
+
+  # ----- Grandes enseignes (un type dédié par enseigne) -----
+  # Par défaut, le script lance une recherche « pokemon + mot-clé » pour
+  # chaque mot-clé de « inclure ». Options communes :
+  #   recherches: ["pokemon etb"]   -> remplace ces recherches par défaut
+  #   fiches:                       -> fiches produit surveillées à chaque
+  #     - "https://..."                tour, même sans mot-clé correspondant
+
+  # Monoprix : livraison seulement dans certaines villes (vérifie ton
+  # adresse sur courses.monoprix.fr). Une recherche « pokemon » par tour
+  # suffit : le rayon compte une dizaine de produits.
+  - nom: "Monoprix"
+    type: monoprix
+    domaine: "courses.monoprix.fr"
+    actif: true
+    intervalle: 45
 
   # ----- Site générique « JSON-LD » (type: jsonld) -----
   # Fonctionne avec beaucoup de sites qui décrivent leurs produits au
