@@ -218,6 +218,29 @@ class EndToEndTests(unittest.TestCase):
         await engine.notifier.close()
         db.close()
 
+    def test_shopify_quick_rounds(self):
+        asyncio.run(self._quick_rounds())
+
+    async def _quick_rounds(self):
+        # 50 produits = une page « rapide » pleine : le catalogue n'est pas lu en entier.
+        self.web.json("/products.json", {"products": [shop_product(i, f"Figurine {i}", True)
+                                                      for i in range(100, 150)]})
+        engine, db = self.make_engine()
+        a = engine.adapters[0]
+        known = [Product("Boutique", str(i), f"Pokémon ETB 30e anniversaire {i}", f"http://x/products/p{i}",
+                         status=Status.AVAILABLE, extra={"handle": f"p{i}"}) for i in range(1, 6)]
+        first = {p.pid for p in await a.poll(known, full=False)}
+        second = {p.pid for p in await a.poll(known, full=False)}
+        self.assertEqual(first, {"1", "2", "3"})    # 3 fiches vérifiées par tour…
+        self.assertEqual(second, {"4", "5", "1"})   # …à tour de rôle
+        # Tour complet : catalogue lu en entier, les produits absents passent en rupture sans requête
+        self.web.json("/products.json", {"products": [shop_product(100, "Figurine", True)]})
+        results = await a.poll(known, full=True)
+        self.assertEqual({p.pid: p.status for p in results}, {str(i): Status.OUT for i in range(1, 6)})
+        await engine.http.close()
+        await engine.notifier.close()
+        db.close()
+
     def test_block_detection(self):
         self.web.json("/products.json", {"error": "slow down"}, code=429)
         engine, db = self.make_engine()

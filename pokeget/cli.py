@@ -5,6 +5,9 @@
   python3 -m pokeget once            vérifie tous les sites une fois (tableau)
   python3 -m pokeget verifier URL    analyse une adresse (Shopify ? JSON-LD ?)
   python3 -m pokeget sonde [URL]     examine les grandes enseignes (ou une adresse)
+  python3 -m pokeget installer       démarrage automatique sur Mac (launchd)
+  python3 -m pokeget desinstaller    retire le démarrage automatique
+  python3 -m pokeget statut          pokeget tourne-t-il ? dernier signe de vie
   python3 -m pokeget                 lance la surveillance en continu
 """
 
@@ -16,6 +19,7 @@ import logging
 import os
 import subprocess
 import sys
+import time
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -27,6 +31,7 @@ from pokeget.notifier import Notifier
 
 LOG_DIR = ROOT / "logs"
 DB_PATH = ROOT / "data" / "pokeget.db"
+LOCK_PATH = ROOT / "data" / "pokeget.lock"
 
 
 def setup_logging(verbose: bool = False, to_file: bool = True) -> None:
@@ -117,8 +122,14 @@ def cmd_once(args) -> None:
 
 def cmd_run(args) -> None:
     from pokeget.engine import Engine
+    from pokeget.service import SingleInstance
 
     cfg = load_or_exit(args.config)
+    lock = SingleInstance(LOCK_PATH)
+    if not lock.acquire():
+        print("pokeget tourne déjà (sans doute lancé automatiquement en arrière-plan).\n"
+              "Pour vérifier : python3 -m pokeget statut")
+        return
     setup_logging(args.verbose)
     keep_mac_awake()
     db = Database(DB_PATH)
@@ -127,6 +138,88 @@ def cmd_run(args) -> None:
         asyncio.run(engine.run_forever())
     except KeyboardInterrupt:
         logging.info("Arrêt demandé (Ctrl+C). À bientôt !")
+    finally:
+        db.close()
+        lock.release()
+
+
+def cmd_installer(args) -> None:
+    from pokeget import service
+
+    python = sys.executable
+    problems = service.install_problems(python, ROOT)
+    if problems:
+        print("❌ Installation impossible :")
+        for pb in problems:
+            print(f"  - {pb}")
+        sys.exit(1)
+    load_or_exit(args.config)  # refuse d'installer une configuration invalide
+    try:
+        service.install(python, ROOT)
+    except RuntimeError as exc:
+        print(f"❌ {exc}")
+        sys.exit(1)
+    print(f"✅ Démarrage automatique installé ({service.PLIST_PATH}).")
+    print("   pokeget tourne maintenant en arrière-plan, et redémarrera tout seul :")
+    print("   à chaque ouverture de session, et s'il s'arrête (au plus une fois par minute).")
+    print("   Tu peux fermer le Terminal. Vérifie dans 1 minute avec : python3 -m pokeget statut")
+
+
+def cmd_desinstaller(args) -> None:
+    from pokeget import service
+
+    if service.uninstall():
+        print("✅ Démarrage automatique retiré : pokeget est arrêté et ne se relancera plus tout seul.")
+    else:
+        print("Le démarrage automatique n'était pas installé.")
+
+
+def ago(ts: float) -> str:
+    s = int(time.time() - ts)
+    if s < 120:
+        return f"il y a {s} s"
+    if s < 7200:
+        return f"il y a {s // 60} min"
+    return f"il y a {s // 3600} h"
+
+
+def cmd_statut(args) -> None:
+    from pokeget import service
+
+    print("Démarrage automatique (launchd) : ", end="")
+    if sys.platform != "darwin":
+        print("non disponible (pas un Mac)")
+    elif not service.is_loaded():
+        print("non installé (python3 -m pokeget installer)")
+    else:
+        pid = service.running_pid()
+        print(f"installé, pokeget en cours (processus {pid})" if pid else
+              "installé, mais pokeget ne tourne pas en ce moment (voir logs/launchd.log)")
+
+    lock = service.SingleInstance(LOCK_PATH)
+    if lock.acquire():
+        lock.release()
+        print("Surveillance : ⛔ arrêtée")
+    else:
+        print("Surveillance : ✅ en cours")
+
+    if not DB_PATH.exists():
+        print("Aucune donnée pour l'instant (pokeget n'a encore jamais tourné).")
+        return
+    db = Database(DB_PATH)
+    try:
+        alive = db.get_meta("last_alive")
+        print(f"Dernier signe de vie : {ago(float(alive)) if alive else 'jamais'}")
+        cfg = load_or_exit(args.config)
+        counters = db.counters()
+        print("\nSites actifs (depuis le dernier résumé quotidien) :")
+        for s in cfg.active_sites:
+            ok = db.get_meta(f"last_ok:{s.name}")
+            checks, errors = counters.get(s.name, (0, 0))
+            print(f"  - {s.name} : dernier tour réussi {ago(float(ok)) if ok else 'jamais'}, "
+                  f"{checks} vérif., {errors} erreur(s)")
+        total, eligible = db.product_counts()
+        print(f"\nProduits suivis : {total} (dont {eligible} achetable(s) en ce moment)")
     finally:
         db.close()
 
@@ -194,8 +287,9 @@ def cmd_sonde(args) -> None:
 def main(argv=None) -> None:
     parser = argparse.ArgumentParser(prog="pokeget", description="Surveillance de stock Pokémon TCG")
     parser.add_argument("commande", nargs="?", default="run",
-                        choices=["run", "init", "test", "once", "verifier", "sonde"],
-                        help="run (défaut), init, test, once, verifier, sonde")
+                        choices=["run", "init", "test", "once", "verifier", "sonde", "installer",
+                                 "desinstaller", "statut"],
+                        help="run (défaut), init, test, once, verifier, sonde, installer, desinstaller, statut")
     parser.add_argument("url", nargs="?", help="adresse à analyser (commande verifier)")
     parser.add_argument("--once", action="store_true", help="identique à la commande « once »")
     parser.add_argument("--test", action="store_true", help="identique à la commande « test »")
@@ -207,4 +301,5 @@ def main(argv=None) -> None:
     if command == "verifier" and not args.url:
         parser.error("indique une adresse : python3 -m pokeget verifier https://boutique.fr")
     {"run": cmd_run, "init": cmd_init, "test": cmd_test, "once": cmd_once, "verifier": cmd_verifier,
-     "sonde": cmd_sonde}[command](args)
+     "sonde": cmd_sonde, "installer": cmd_installer, "desinstaller": cmd_desinstaller,
+     "statut": cmd_statut}[command](args)

@@ -96,18 +96,8 @@ sites:
   - nom: "Monpokestore"
     type: shopify
     domaine: "www.monpokestore.fr"
-    actif: false
+    actif: true
     doit_contenir: []
-
-  - nom: "Blazing Tail"
-    type: shopify
-    domaine: "www.blazingtail.fr"
-    actif: false
-
-  - nom: "Shop TCG"
-    type: shopify
-    domaine: "shop-tcg.fr"
-    actif: false
 
   # ----- Grandes enseignes (un type dédié par enseigne) -----
   # Par défaut, le script lance une recherche « pokemon + mot-clé » pour

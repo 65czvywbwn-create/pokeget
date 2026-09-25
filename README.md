@@ -181,9 +181,7 @@ Ajoute une ligne dans `exclure:`, par exemple `- "pin's"`.
        actif: true
    ```
 
-La config contient déjà trois boutiques candidates, désactivées
-(`actif: false`) : Monpokestore, Blazing Tail et Shop TCG. **Vérifie chacune
-avec la commande ci-dessus** avant de passer `actif: true`.
+La config contient déjà Monpokestore (vérifiée : c'est bien Shopify).
 
 ### Surveiller une fiche produit précise (site JSON-LD)
 
