@@ -15,6 +15,7 @@ from pokeget.adapters.auchan import AuchanAdapter
 from pokeget.adapters.leclerc import LeclercAdapter
 from pokeget.adapters.monoprix import MonoprixAdapter
 from pokeget.adapters.philibert import PhilibertAdapter, stock_status
+from pokeget.adapters.ultrajeux import UltraJeuxAdapter
 from pokeget.config import SiteConfig
 from pokeget.http import Blocked, HttpClient
 from pokeget.matching import Matcher, Rule
@@ -225,6 +226,28 @@ class PhilibertTests(unittest.TestCase):
         finally:
             await http.close()
             web.close()
+
+
+class UltraJeuxTests(unittest.TestCase):
+    def setUp(self):
+        self.a = UltraJeuxAdapter(site("ultrajeux", "www.ultrajeux.com"), HttpClient(), MATCHER)
+
+    def test_category_page(self):
+        found = {p.pid: p for p in self.a.parse_search(fixture("ultrajeux_categorie.html"))}
+        self.assertEqual(set(found), {"32960", "32039", "32273"})
+        etb = found["32960"]
+        self.assertEqual((etb.title, etb.status, etb.price),
+                         ("ETB Coffret Dresseur d'Elite Pokémon 30e Anniversaire", Status.AVAILABLE, 229.9))
+        self.assertEqual(etb.buy_url, "https://www.ultrajeux.com/monpanier.php?op=danspanier&jeu=4&add=1"
+                                      "&quantite%5B0%5D%5B32960%5D=1")
+        self.assertEqual(found["32039"].status, Status.OUT)
+        self.assertEqual(found["32039"].buy_url, found["32039"].url)  # pas de lien panier si indisponible
+
+    def test_product_page(self):
+        url = "https://www.ultrajeux.com/produit-32039-me25.html"
+        p = self.a.parse_product(fixture("ultrajeux_fiche.html"), url)
+        self.assertEqual((p.pid, p.status, p.price), ("32039", Status.OUT, 229.9))  # microdonnées, pas le voisin
+        self.assertTrue(p.title.startswith("Pokémon - ETB Coffret Dresseur d'Elite - ME2.5"))
 
 
 class BlockDetectionTests(unittest.TestCase):

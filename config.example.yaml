@@ -150,6 +150,24 @@ sites:
     actif: true
     intervalle: 75
 
+  # UltraJeux : lit la catégorie « ETB Coffret Dresseur d'Elite » Pokémon.
+  # Pour d'autres catégories, copie leur adresse depuis le site :
+  #   pages:
+  #     - "https://www.ultrajeux.com/cat-0-4-505-pokemon-etb-coffret-dresseur-d-elite.html"
+  #     - "https://www.ultrajeux.com/cat-0-4-515-pokemon-coffret-6-boosters.html"
+  # Le lien de la notification ajoute directement l'article au panier.
+  - nom: "UltraJeux"
+    type: ultrajeux
+    domaine: "www.ultrajeux.com"
+    actif: true
+    intervalle: 60
+
+  # ----- Enseignes NON surveillées (anti-robot) -----
+  # Fnac, King Jouet (DataDome), Amazon (AWS WAF), Cdiscount (Baleen),
+  # Micromania et Pokémon Center (Imperva) bloquent les programmes
+  # automatiques. pokeget ne cherche pas à contourner ces protections.
+  # Carrefour et Cultura (Cloudflare) : adapters à venir.
+
   # ----- Site générique « JSON-LD » (type: jsonld) -----
   # Fonctionne avec beaucoup de sites qui décrivent leurs produits au
   # format schema.org. On liste les fiches produit à surveiller :
@@ -158,9 +176,12 @@ sites:
   #   recherche:
   #     url: "https://exemple.fr/recherche?q={q}"   ({q} = le mot-clé)
   #     motif: "/produit/"   (morceau d'adresse que contient un lien de fiche)
-  - nom: "Exemple JSON-LD"
+  # Fonctionne notamment pour Play-In (www.play-in.com), JouéClub et
+  # La Grande Récré : colle l'adresse de la fiche qui t'intéresse.
+  # (Play-In interdit aux robots sa page de recherche : fiches uniquement.)
+  - nom: "Play-In"
     type: jsonld
     actif: false
     intervalle: 60
     fiches:
-      - "https://www.exemple.fr/produit/etb-30e-anniversaire"
+      - "https://www.play-in.com/fr/produit/670423/booster-pokemon-30-ans-30th-celebration-m6a-cn"

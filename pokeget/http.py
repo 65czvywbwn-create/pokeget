@@ -32,6 +32,7 @@ CAPTCHA_MARKERS = (
     "attention required! | cloudflare",
     "<title>just a moment...</title>",  # Cloudflare
     "cf-chl-bypass",
+    "window._cf_chl_opt",            # Cloudflare : page de défi
     "gokuprops",                     # AWS WAF (Amazon, Monoprix) : page de défi
     "awswafintegration.checkforcerefresh",
     "__blnchallengestore",           # Baleen (Cdiscount) : fausse page 200

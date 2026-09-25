@@ -11,6 +11,7 @@ from pokeget.adapters.leclerc import LeclercAdapter
 from pokeget.adapters.monoprix import MonoprixAdapter
 from pokeget.adapters.philibert import PhilibertAdapter
 from pokeget.adapters.shopify import ShopifyAdapter
+from pokeget.adapters.ultrajeux import UltraJeuxAdapter
 
 ADAPTERS: Dict[str, Type[Adapter]] = {
     "shopify": ShopifyAdapter,
@@ -19,6 +20,7 @@ ADAPTERS: Dict[str, Type[Adapter]] = {
     "auchan": AuchanAdapter,
     "leclerc": LeclercAdapter,
     "philibert": PhilibertAdapter,
+    "ultrajeux": UltraJeuxAdapter,
 }
 
 
