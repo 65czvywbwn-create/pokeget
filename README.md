@@ -115,6 +115,7 @@ alertes.
 | tout vérifier une fois et voir un tableau      | `python3 -m pokeget --once`                |
 | envoyer une fausse alerte                      | `python3 -m pokeget --test`                |
 | savoir si une boutique est sur Shopify / lisible | `python3 -m pokeget verifier https://boutique.fr/...` |
+| examiner les grandes enseignes (anti-robot, données) | `python3 -m pokeget sonde`         |
 | plus de détails à l'écran                      | ajoute `-v` à la fin de la commande        |
 
 Pense à `cd ~/pokeget` puis `source .venv/bin/activate` avant ces

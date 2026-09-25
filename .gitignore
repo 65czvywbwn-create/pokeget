@@ -7,3 +7,6 @@ __pycache__/
 config.yaml
 data/
 logs/
+
+# Pages enregistrées par la commande « sonde »
+sondes/

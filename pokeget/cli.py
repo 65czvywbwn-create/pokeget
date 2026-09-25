@@ -4,6 +4,7 @@
   python3 -m pokeget test            envoie une fausse alerte sur l'iPhone
   python3 -m pokeget once            vérifie tous les sites une fois (tableau)
   python3 -m pokeget verifier URL    analyse une adresse (Shopify ? JSON-LD ?)
+  python3 -m pokeget sonde [URL]     examine les grandes enseignes (ou une adresse)
   python3 -m pokeget                 lance la surveillance en continu
 """
 
@@ -177,11 +178,24 @@ def cmd_verifier(args) -> None:
     asyncio.run(go())
 
 
+def cmd_sonde(args) -> None:
+    from pokeget.probe import PROBE_DIR, format_probe, run_probe
+
+    targets = None
+    if args.url:
+        url = args.url if "://" in args.url else f"https://{args.url}"
+        targets = {urlsplit(url).hostname or "site": [url]}
+    print("Examen en cours (environ 1 minute)…\n")
+    rows = asyncio.run(run_probe(targets))
+    print(format_probe(rows))
+    print(f"\nPages enregistrées dans : {PROBE_DIR}")
+
+
 def main(argv=None) -> None:
     parser = argparse.ArgumentParser(prog="pokeget", description="Surveillance de stock Pokémon TCG")
     parser.add_argument("commande", nargs="?", default="run",
-                        choices=["run", "init", "test", "once", "verifier"],
-                        help="run (défaut), init, test, once, verifier")
+                        choices=["run", "init", "test", "once", "verifier", "sonde"],
+                        help="run (défaut), init, test, once, verifier, sonde")
     parser.add_argument("url", nargs="?", help="adresse à analyser (commande verifier)")
     parser.add_argument("--once", action="store_true", help="identique à la commande « once »")
     parser.add_argument("--test", action="store_true", help="identique à la commande « test »")
@@ -192,4 +206,5 @@ def main(argv=None) -> None:
     command = "once" if args.once else "test" if args.test else args.commande
     if command == "verifier" and not args.url:
         parser.error("indique une adresse : python3 -m pokeget verifier https://boutique.fr")
-    {"run": cmd_run, "init": cmd_init, "test": cmd_test, "once": cmd_once, "verifier": cmd_verifier}[command](args)
+    {"run": cmd_run, "init": cmd_init, "test": cmd_test, "once": cmd_once, "verifier": cmd_verifier,
+     "sonde": cmd_sonde}[command](args)
