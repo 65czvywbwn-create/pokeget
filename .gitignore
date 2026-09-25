@@ -1,0 +1,9 @@
+# Environnement Python local
+.venv/
+__pycache__/
+*.pyc
+
+# Fichiers personnels (contiennent tes topics ntfy secrets) : jamais sur GitHub
+config.yaml
+data/
+logs/

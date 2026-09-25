@@ -1,0 +1,123 @@
+# =====================================================================
+#  pokeget : configuration
+#  ---------------------------------------------------------------------
+#  Ce fichier est un MODÈLE. La commande « python3 -m pokeget init »
+#  le copie dans config.yaml en générant tes topics ntfy secrets.
+#  C'est config.yaml que tu modifies ensuite (il n'est jamais envoyé
+#  sur GitHub).
+#
+#  Règles YAML à connaître :
+#   - l'indentation (les espaces en début de ligne) compte : utilise
+#     des espaces, jamais de tabulations ;
+#   - « # » commence un commentaire, ignoré par le programme ;
+#   - mets les textes entre guillemets "comme ceci".
+#  Après une modification, redémarre le script (voir README).
+# =====================================================================
+
+# --- Notifications iPhone (application ntfy) ---------------------------
+ntfy:
+  serveur: "https://ntfy.sh"
+  # Topic secret sur lequel tu reçois les alertes. Abonne-toi à ce nom
+  # exact dans l'app ntfy. Ne le partage pas : quiconque le connaît peut
+  # lire tes alertes.
+  topic: "REMPLACE_PAR_INIT"
+  # Second topic secret utilisé en interne par le bouton
+  # « Couper ce produit 1 h ». Tu n'as PAS besoin de t'y abonner.
+  topic_controle: "REMPLACE_PAR_INIT_CTL"
+
+# --- Comportement des alertes ------------------------------------------
+alertes:
+  # Alerter aussi quand une précommande s'ouvre (true = oui, false = non)
+  precommande: true
+  # Délai minimum entre deux alertes pour un même produit (anti-spam si
+  # un site hésite entre « dispo » et « rupture »)
+  delai_min_entre_alertes_minutes: 10
+  # Heure du résumé quotidien « toujours actif »
+  heure_resume_quotidien: "09:00"
+  # Au bout de combien de minutes de blocage (403, 429, captcha) un site
+  # déclenche une alerte « site bloqué »
+  alerte_site_bloque_apres_minutes: 15
+
+# --- Produits recherchés -------------------------------------------------
+produits:
+  # Mots-clés à INCLURE : un produit est retenu si son nom contient au
+  # moins un de ces mots-clés. Majuscules, accents et apostrophes sont
+  # ignorés (« Dresseur d’Élite » = « dresseur d'elite »).
+  # prix_max : prix maximum en euros pour ce mot-clé (supprime la ligne
+  # prix_max pour ne pas mettre de limite).
+  inclure:
+    - mot: "30e anniversaire"
+      prix_max: 90
+    - mot: "30 ans"
+      prix_max: 90
+    - mot: "dresseur d'élite"
+      prix_max: 70
+
+  # Mots-clés à EXCLURE : un produit dont le nom contient un de ces mots
+  # est ignoré, même s'il contient un mot-clé à inclure.
+  exclure:
+    - "occasion"
+    - "sleeve"
+    - "protège-cartes"
+    - "classeur"
+    - "portfolio"
+
+  # Le nom du produit doit AUSSI contenir au moins un de ces mots
+  # (évite par ex. « Le Livre des 30 ans du Club Dorothée »).
+  # Mets [] pour désactiver. Chaque site peut avoir sa propre valeur.
+  doit_contenir: ["pokemon"]
+
+# --- Marketplaces (Amazon, Cdiscount) ------------------------------------
+marketplace:
+  # true : n'alerter que si le vendeur est l'enseigne elle-même
+  # (Amazon, Cdiscount), jamais un revendeur tiers.
+  vendeur_officiel_uniquement: true
+
+# --- Sites surveillés -----------------------------------------------------
+#  Chaque site a :
+#   nom        : le nom affiché dans les alertes
+#   type       : le module (« adapter ») qui sait lire ce site
+#   actif      : true pour surveiller, false pour mettre en pause
+#   intervalle : secondes entre deux vérifications (±20 % aléatoire).
+#                Sans cette ligne, une valeur par défaut raisonnable
+#                est utilisée (Shopify 20 s, grandes enseignes 45-60 s,
+#                Amazon 75 s).
+sites:
+
+  # ----- Boutiques Shopify (type: shopify) -----
+  # Il suffit du nom de domaine. Vérifie d'abord qu'une boutique est bien
+  # sur Shopify avec : python3 -m pokeget verifier https://le-domaine.fr
+  # Optionnel :
+  #   collection: "pokemon"   -> ne lire que cette collection (grosses boutiques)
+  #   pages_max: 4            -> nombre de pages de 250 produits à parcourir
+  #   doit_contenir: []       -> boutique 100 % Pokémon : pas besoin du mot « pokemon »
+  - nom: "Monpokestore"
+    type: shopify
+    domaine: "www.monpokestore.fr"
+    actif: false
+    doit_contenir: []
+
+  - nom: "Blazing Tail"
+    type: shopify
+    domaine: "www.blazingtail.fr"
+    actif: false
+
+  - nom: "Shop TCG"
+    type: shopify
+    domaine: "shop-tcg.fr"
+    actif: false
+
+  # ----- Site générique « JSON-LD » (type: jsonld) -----
+  # Fonctionne avec beaucoup de sites qui décrivent leurs produits au
+  # format schema.org. On liste les fiches produit à surveiller :
+  #   fiches: liste d'adresses de fiches produit (toujours surveillées)
+  # Optionnel, pour découvrir de nouvelles fiches automatiquement :
+  #   recherche:
+  #     url: "https://exemple.fr/recherche?q={q}"   ({q} = le mot-clé)
+  #     motif: "/produit/"   (morceau d'adresse que contient un lien de fiche)
+  - nom: "Exemple JSON-LD"
+    type: jsonld
+    actif: false
+    intervalle: 60
+    fiches:
+      - "https://www.exemple.fr/produit/etb-30e-anniversaire"

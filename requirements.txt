@@ -1,0 +1,3 @@
+# Bibliothèques Python nécessaires (installées avec : pip install -r requirements.txt)
+curl_cffi>=0.7      # requêtes HTTP qui imitent un vrai navigateur
+PyYAML>=6.0         # lecture du fichier config.yaml
