@@ -306,24 +306,70 @@ cat ~/.ssh/oracle_pokeget.pub
 ### Étape 3 : créer la machine
 
 Dans la console Oracle : menu ☰ → **Compute** → **Instances** →
-**Create instance**.
+**Create instance**. Le formulaire tient en 4 pages (bouton **Next** en bas
+à droite), suivies d'un récapitulatif.
 
-1. **Name** : `pokeget`.
-2. **Image and shape** → **Edit** :
-   * Image : **Canonical Ubuntu 24.04** ;
-   * Shape : **VM.Standard.E2.1.Micro** (AMD, marqué « Always Free
-     eligible »), largement suffisant. L'autre choix gratuit,
-     **VM.Standard.A1.Flex** (ARM, plus puissant), marche aussi mais est
-     souvent indisponible (« Out of capacity »).
-3. **Networking** : laisse les valeurs par défaut, en vérifiant que
-   « Assign a public IPv4 address » est coché.
-4. **Add SSH keys** → **Paste public keys** : colle la ligne affichée à
-   l'étape 2 (elle commence par `ssh-ed25519`).
-5. **Create**. Au bout d'une minute ou deux, l'instance passe à
-   « Running ». Note son **Public IP address** (par ex. `140.238.12.34`).
+**Page 1 – Basic information**
+
+1. **Name** : `pokeget`. Compartiment : laisse `<ton compte> (root)`.
+2. **Image** → **Change image** → tuile **Ubuntu**, puis fais défiler la
+   liste des versions et coche **Canonical Ubuntu 24.04** (sans
+   « Minimal ») → **Select image**.
+3. **Shape** → **Change shape** → **Virtual machine**, puis au choix :
+   * **Ampere** → **VM.Standard.A1.Flex** (ARM), réglée sur **1 OCPU** et
+     **6 Go** de mémoire ;
+   * ou **Specialty and previous generation** → **VM.Standard.E2.1.Micro**
+     (AMD, 1 Go de mémoire).
+
+   Les deux sont marquées « Always Free-eligible » et conviennent à
+   pokeget. Prends celle qui est disponible (voir « Out of capacity »
+   ci-dessous).
+
+**Page 2 – Security** : ne change rien.
+
+**Page 3 – Networking**
+
+1. **Primary network** : **Create new virtual cloud network** (un compte
+   neuf n'a pas encore de réseau). **Subnet** : **Create new public
+   subnet**. Garde les noms et le bloc `10.0.0.0/24` proposés. Les
+   avertissements jaunes de cette page sont normaux.
+2. **Automatically assign public IPv4 address** est grisé tant que le
+   réseau n'existe pas : c'est normal, l'adresse publique s'ajoute après
+   la création (plus bas).
+3. **Add SSH keys** (tout en bas) : coche **Paste public key** (et non
+   « Generate a key pair for me ») et colle la ligne affichée à l'étape 2
+   (elle commence par `ssh-ed25519`).
+
+**Page 4 – Storage** : ne change rien (disque de 47 Go, inclus dans
+l'offre gratuite).
+
+**Review** : vérifie la forme (« Always Free-eligible ») et la présence de
+la clé SSH, puis **Create**. « Public IPv4 address : No » y est normal.
+
+**« Out of capacity for shape … »** : Oracle n'a plus de place libre pour
+cette forme dans ta région. Rien n'est créé ni facturé. Essaie l'autre
+forme (bouton **Previous** jusqu'à la page 1), et à défaut réessaie **Create**
+plus tard (tôt le matin ou le soir) : les places se libèrent au fil de la
+journée.
+
+Au bout d'une minute, l'instance passe de « Provisioning » à **Running**.
+
+**Ajouter l'adresse IP publique** (sans elle, le Mac ne peut pas joindre le
+serveur) :
+
+1. Sur la page de l'instance, onglet **Networking** → tableau **Attached
+   VNICs** → clique sur le nom de la carte (« Primary VNIC »).
+2. Onglet **IP administration** → sur la ligne `10.0.0.x (Primary IP)`,
+   **⋯** → **Edit**.
+3. **Public IP type** : **Ephemeral public IP** (gratuite ; pas
+   « Reserved »), nom `pokeget` → **Update**.
+4. Note l'adresse qui apparaît dans la colonne **Public IP address** (par
+   ex. `145.241.x.x`).
 
 Tant que tout ce que tu crées porte la mention « Always Free », rien n'est
-facturé.
+facturé. Le bandeau « Free Tier account … Upgrade » reste affiché pendant
+l'essai de 30 jours : **ne clique jamais sur « Upgrade »** ; à la fin de
+l'essai, le compte passe tout seul en « Always Free » et la machine reste.
 
 ### Étape 4 : se connecter au serveur depuis le Mac
 
@@ -511,8 +557,13 @@ Sur le serveur : `python3 -m pokeget desinstaller`. Sur le Mac : remets
   bloqueur de publicité) ; ne multiplie pas les essais le même jour.
 * **Le compte reste « en attente de validation »** : attends le mail (il
   peut mettre jusqu'à 24 h).
-* **« Out of capacity » à la création de la machine** : choisis la forme
-  VM.Standard.E2.1.Micro plutôt que A1.Flex, ou réessaie plus tard.
+* **« Out of capacity » à la création de la machine** : essaie l'autre
+  forme gratuite (A1.Flex ou E2.1.Micro), ou réessaie plus tard (voir
+  l'étape 3).
+* **`ssh pokeget` reste bloqué (« Operation timed out »)** : la machine n'a
+  pas d'adresse IP publique (voir la fin de l'étape 3), ou le réseau n'est
+  pas relié à Internet : dans l'onglet **Networking** de l'instance, utilise
+  la carte « Connect public subnet to internet » (gratuite).
 * **`ssh pokeget` ne répond pas** : vérifie l'adresse dans `~/.ssh/config`
   et que l'instance est « Running ». « Permission denied » : la clé collée à
   l'étape 3 n'est pas celle de `~/.ssh/oracle_pokeget.pub` ; recrée la
