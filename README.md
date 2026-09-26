@@ -14,6 +14,7 @@ paiement, et c'est toi qui finalises l'achat. L'outil est 100 % gratuit
 2. [Recevoir les alertes sur l'iPhone (ntfy)](#2-recevoir-les-alertes-sur-liphone-ntfy)
 3. [Lancer la surveillance](#3-lancer-la-surveillance)
 4. [Démarrage automatique (recommandé)](#4-démarrage-automatique-recommandé)
+   * [4 bis. Faire tourner pokeget quand le Mac est éteint (serveur gratuit Oracle)](#4-bis-faire-tourner-pokeget-quand-le-mac-est-éteint-serveur-gratuit-oracle)
 5. [Les sites surveillés](#5-les-sites-surveillés)
 6. [Modifier la configuration](#6-modifier-la-configuration-configyaml)
 7. [Mettre à jour pokeget](#7-mettre-à-jour-pokeget)
@@ -221,9 +222,306 @@ Sites actifs (depuis le dernier résumé quotidien) :
 * Deux pokeget ne peuvent pas tourner en même temps (sinon alertes en
   double). Si tu tapes `python3 -m pokeget` alors qu'il tourne déjà en
   arrière-plan, il te le dit et s'arrête.
-* launchd ne fonctionne que lorsque ta session Mac est ouverte.
+* launchd ne fonctionne que lorsque ta session Mac est ouverte. Pour une
+  surveillance Mac éteint, voir la [section 4 bis](#4-bis-faire-tourner-pokeget-quand-le-mac-est-éteint-serveur-gratuit-oracle).
 * Les erreurs graves (plantage, config illisible) vont dans
   `logs/launchd.log` ; tout le reste est dans `logs/pokeget.log`.
+
+---
+
+## 4 bis. Faire tourner pokeget quand le Mac est éteint (serveur gratuit Oracle)
+
+Oracle Cloud propose gratuitement et sans limite de durée (offre
+« Always Free ») une petite machine Linux allumée 24 h/24. pokeget peut y
+tourner comme sur le Mac, avec la même commande `installer` : sur Linux,
+c'est **systemd** (l'équivalent de launchd) qui le démarre avec la machine
+et le relance s'il s'arrête.
+
+### Ce qu'il faut savoir avant de commencer
+
+* **Carte bancaire demandée à l'inscription**, uniquement pour vérifier ton
+  identité : Oracle bloque 1 € environ puis l'annule. Tu ne paies rien tant
+  que tu restes en offre gratuite. **Ne clique jamais sur « Upgrade » /
+  « Pay As You Go »** : c'est ce qui rendrait le compte payant. Les cartes
+  prépayées ou virtuelles sont souvent refusées.
+* **La région choisie à l'inscription est définitive** : prends « France
+  Central (Paris) » ou « France South (Marseille) ».
+* **Certains sites bloquent les serveurs** (ils acceptent une connexion de
+  particulier mais pas celle d'un centre de données). C'est le cas de
+  Carrefour (Cloudflare) ; Cultura sera aussi gardé sur le Mac par prudence.
+  Tu vérifies site par site avec `once` (étape 7) : un site bloqué depuis le
+  serveur reste surveillé par le Mac.
+* **Oracle peut récupérer une machine gratuite qu'il juge inutilisée.** Si
+  ça arrive, tu reçois un e-mail, et le résumé « ✅ pokeget toujours actif
+  (Serveur Oracle) » de 9 h n'arrive plus : il suffit de recréer la machine
+  (étapes 3 à 8, une vingtaine de minutes).
+
+### Qui surveille quoi (pas d'alertes en double)
+
+Chaque machine a **sa propre `config.yaml`**, avec **les mêmes topics
+ntfy** (tu reçois tout sur le même iPhone) mais **des sites différents** :
+
+| Machine | Sites actifs | `machine:` |
+|---|---|---|
+| Serveur Oracle (24 h/24) | Monpokestore, Monoprix, Auchan, Leclerc, Philibert, UltraJeux | `"Serveur Oracle"` |
+| Mac (quand il est allumé) | Carrefour, Cultura | `"Mac"` |
+
+Un même site n'est jamais surveillé par les deux : pas de doublon. Le bouton
+« Couper ce produit 1 h » marche dans les deux cas (chaque machine écoute le
+topic de contrôle et ne réagit qu'aux produits qu'elle connaît).
+
+### Étape 1 : créer le compte Oracle
+
+1. Va sur <https://www.oracle.com/fr/cloud/free/> et clique sur
+   « Commencer gratuitement ».
+2. Pays : France. Saisis ton e-mail, puis clique sur le lien reçu par mail.
+3. Remplis le formulaire. **Région d'origine** : France Central (Paris) ou
+   France South (Marseille).
+4. Vérification de la carte bancaire (et éventuellement validation 3D Secure
+   sur l'appli de ta banque).
+5. Attends le mail « Your account is ready » (de quelques minutes à
+   quelques heures), puis connecte-toi sur <https://cloud.oracle.com>.
+
+Si l'inscription échoue, voir [Dépannage de l'inscription](#dépannage-de-linscription-oracle)
+plus bas.
+
+### Étape 2 : créer une clé SSH sur le Mac
+
+SSH est le moyen de piloter le serveur depuis le Terminal du Mac. La « clé »
+remplace le mot de passe : un fichier secret reste sur ton Mac
+(`~/.ssh/oracle_pokeget`), et sa moitié publique (`.pub`) est donnée à
+Oracle. Dans le Terminal du Mac :
+
+```bash
+ssh-keygen -t ed25519 -f ~/.ssh/oracle_pokeget -C pokeget
+```
+
+Appuie deux fois sur Entrée (pas de phrase secrète). Puis affiche la clé
+publique, que tu copieras à l'étape 3 :
+
+```bash
+cat ~/.ssh/oracle_pokeget.pub
+```
+
+### Étape 3 : créer la machine
+
+Dans la console Oracle : menu ☰ → **Compute** → **Instances** →
+**Create instance**.
+
+1. **Name** : `pokeget`.
+2. **Image and shape** → **Edit** :
+   * Image : **Canonical Ubuntu 24.04** ;
+   * Shape : **VM.Standard.E2.1.Micro** (AMD, marqué « Always Free
+     eligible »), largement suffisant. L'autre choix gratuit,
+     **VM.Standard.A1.Flex** (ARM, plus puissant), marche aussi mais est
+     souvent indisponible (« Out of capacity »).
+3. **Networking** : laisse les valeurs par défaut, en vérifiant que
+   « Assign a public IPv4 address » est coché.
+4. **Add SSH keys** → **Paste public keys** : colle la ligne affichée à
+   l'étape 2 (elle commence par `ssh-ed25519`).
+5. **Create**. Au bout d'une minute ou deux, l'instance passe à
+   « Running ». Note son **Public IP address** (par ex. `140.238.12.34`).
+
+Tant que tout ce que tu crées porte la mention « Always Free », rien n'est
+facturé.
+
+### Étape 4 : se connecter au serveur depuis le Mac
+
+Pour ne pas retaper l'adresse à chaque fois, on donne un surnom au serveur.
+Dans le Terminal du Mac, ouvre (ou crée) le fichier de réglages SSH :
+
+```bash
+nano ~/.ssh/config
+```
+
+Ajoute ces lignes en remplaçant l'adresse par la tienne, puis Ctrl + O,
+Entrée, Ctrl + X pour enregistrer et quitter :
+
+```
+Host pokeget
+  HostName 140.238.12.34
+  User ubuntu
+  IdentityFile ~/.ssh/oracle_pokeget
+```
+
+Connexion :
+
+```bash
+ssh pokeget
+```
+
+La première fois, réponds `yes` à la question « Are you sure you want to
+continue connecting ». L'invite devient `ubuntu@pokeget:~$` : **les commandes
+que tu tapes s'exécutent maintenant sur le serveur**. Pour revenir au Mac :
+`exit`.
+
+### Étape 5 : installer pokeget sur le serveur
+
+Toujours connecté au serveur (`ssh pokeget`) :
+
+```bash
+# mettre le système à jour et installer git et l'outil d'environnement Python
+sudo apt update && sudo apt install -y git python3-venv
+# mettre l'heure de Paris (pour le résumé de 9 h)
+sudo timedatectl set-timezone Europe/Paris
+# récupérer pokeget
+cd ~
+git clone https://github.com/65czvywbwn-create/pokeget.git
+cd pokeget
+git checkout claude/upbeat-brahmagupta-6txm4m
+# créer l'environnement Python et installer les bibliothèques
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+# vérifier que tout marche
+python3 -m unittest discover -s tests
+```
+
+La dernière commande doit finir par `OK`. Tape `exit` pour revenir au Mac.
+
+### Étape 6 : préparer la config du serveur (sur le Mac)
+
+On part de ta `config.yaml` (mêmes topics, mêmes mots-clés) :
+
+```bash
+cd ~/pokeget
+cp config.yaml config.serveur.yaml
+open -e config.serveur.yaml
+```
+
+Dans `config.serveur.yaml` :
+* mets `machine: "Serveur Oracle"` (ligne à ajouter en haut du fichier si
+  elle n'y est pas, sans espace au début) ;
+* mets `actif: false` sur **Carrefour** et **Cultura** ;
+* laisse les autres sites comme ils sont.
+
+`config.serveur.yaml` contient tes topics secrets : comme `config.yaml`, il
+n'est jamais envoyé sur GitHub.
+
+### Étape 7 : copier la config et vérifier les sites depuis le serveur
+
+Sur le Mac, on arrête pokeget le temps de copier sa mémoire (la liste des
+produits déjà vus et des alertes déjà envoyées), pour que le serveur ne
+renvoie pas d'anciennes alertes :
+
+```bash
+cd ~/pokeget
+source .venv/bin/activate
+python3 -m pokeget desinstaller
+ssh pokeget "mkdir -p ~/pokeget/data"
+scp config.serveur.yaml pokeget:pokeget/config.yaml
+scp data/pokeget.db pokeget:pokeget/data/pokeget.db
+```
+
+(`scp` copie un fichier du Mac vers le serveur ; `pokeget:` désigne le
+serveur.) Puis, sur le serveur :
+
+```bash
+ssh pokeget
+cd ~/pokeget
+source .venv/bin/activate
+python3 -m pokeget once
+```
+
+Un site dont la ligne affiche **ERREUR** dans la colonne « Statut » (la
+raison est écrite à côté, par ex. « bloqué ») ne fonctionne pas depuis le
+serveur. Pour chacun d'eux, mets `actif: false`
+dans `config.serveur.yaml` sur le Mac (et laisse-le actif sur le Mac à
+l'étape 9), recopie avec `scp`, et relance `once`.
+
+### Étape 8 : démarrage automatique sur le serveur
+
+Toujours sur le serveur :
+
+```bash
+python3 -m pokeget installer
+python3 -m pokeget statut
+```
+
+`installer` crée le service `/etc/systemd/system/pokeget.service` (il
+utilise `sudo`, déjà autorisé pour l'utilisateur `ubuntu`). Tu reçois
+« 🚀 pokeget démarré (Serveur Oracle) » sur l'iPhone. Tu peux taper `exit` :
+pokeget continue de tourner, même Mac éteint.
+
+### Étape 9 : le Mac ne surveille plus que Carrefour et Cultura
+
+Sur le Mac, ouvre ta config habituelle :
+
+```bash
+cd ~/pokeget
+open -e config.yaml
+```
+
+* ajoute `machine: "Mac"` ;
+* mets `actif: false` sur tous les sites **sauf Carrefour et Cultura** (et
+  les éventuels sites bloqués depuis le serveur à l'étape 7).
+
+Puis :
+
+```bash
+source .venv/bin/activate
+python3 -m pokeget once
+python3 -m pokeget installer
+```
+
+Tu reçois « 🚀 pokeget démarré (Mac) ». Chaque matin à 9 h, tu reçois deux
+résumés « ✅ pokeget toujours actif » : un « (Serveur Oracle) », et un
+« (Mac) » si le Mac est allumé.
+
+### Au quotidien
+
+| Je veux…                                   | Commandes (depuis le Terminal du Mac)                                                        |
+|--------------------------------------------|----------------------------------------------------------------------------------------------|
+| voir si le serveur tourne                  | `ssh pokeget "cd pokeget && .venv/bin/python3 -m pokeget statut"`                            |
+| lire ses logs                              | `ssh pokeget "tail -50 pokeget/logs/pokeget.log"`                                            |
+| modifier sa config                         | modifier `config.serveur.yaml` sur le Mac, puis les deux commandes ci-dessous               |
+|                                            | `scp config.serveur.yaml pokeget:pokeget/config.yaml`                                        |
+|                                            | `ssh pokeget "cd pokeget && .venv/bin/python3 -m pokeget redemarrer"`                        |
+
+Les erreurs graves du service vont dans `logs/service.log` sur le serveur.
+
+### Mettre à jour pokeget sur le serveur
+
+```bash
+ssh pokeget
+cd ~/pokeget
+source .venv/bin/activate
+git pull
+pip install -r requirements.txt
+python3 -m unittest discover -s tests
+python3 -m pokeget redemarrer
+exit
+```
+
+Et la même chose sur le Mac (voir [section 7](#7-mettre-à-jour-pokeget)).
+
+### Revenir à tout sur le Mac
+
+Sur le serveur : `python3 -m pokeget desinstaller`. Sur le Mac : remets
+`actif: true` sur les sites voulus dans `config.yaml`, puis
+`python3 -m pokeget redemarrer`.
+
+### Dépannage de l'inscription Oracle
+
+* **Carte refusée** : utilise une vraie carte bancaire (pas prépayée, pas
+  virtuelle), au nom et à l'adresse saisis dans le formulaire ; valide la
+  demande 3D Secure dans l'appli de ta banque ; désactive un éventuel VPN.
+* **« Erreur lors du traitement de la transaction »** : réessaie le
+  lendemain, sans VPN, depuis un autre navigateur (Safari ou Chrome, sans
+  bloqueur de publicité) ; ne multiplie pas les essais le même jour.
+* **Le compte reste « en attente de validation »** : attends le mail (il
+  peut mettre jusqu'à 24 h).
+* **« Out of capacity » à la création de la machine** : choisis la forme
+  VM.Standard.E2.1.Micro plutôt que A1.Flex, ou réessaie plus tard.
+* **`ssh pokeget` ne répond pas** : vérifie l'adresse dans `~/.ssh/config`
+  et que l'instance est « Running ». « Permission denied » : la clé collée à
+  l'étape 3 n'est pas celle de `~/.ssh/oracle_pokeget.pub` ; recrée la
+  machine avec la bonne.
+* **`installer` dit « systemd introuvable »** : l'image n'est pas Ubuntu ;
+  recrée la machine avec Canonical Ubuntu 24.04.
+
+Si Oracle refuse l'inscription malgré tout, garde pokeget sur le Mac
+(section 4) : il suffit de ne pas faire les étapes ci-dessus.
 
 ---
 
@@ -368,7 +666,7 @@ fichiers.
 tail -f logs/pokeget.log        # suivre en direct (Ctrl + C pour quitter)
 grep ALERTE logs/pokeget.log    # retrouver toutes les alertes envoyées
 grep bloqué logs/pokeget.log    # voir les sites qui ont bloqué
-cat logs/launchd.log            # erreurs au démarrage automatique
+cat logs/launchd.log            # erreurs au démarrage automatique (logs/service.log sur Linux)
 ```
 
 Exemple de ligne : `2026-09-25 18:06:21 | INFO | [Monoprix] Coffret Dresseur d'Élite Pokémon 30e Anniversaire ETB : rupture -> disponible (59,99 €, ALERTE)`
@@ -438,7 +736,7 @@ pokeget/
 │   ├── http.py             requêtes « navigateur », pauses, détection des blocages
 │   ├── notifier.py         notifications ntfy
 │   ├── engine.py           boucles par site, bouton 1 h, résumé de 9 h, signe de vie
-│   ├── service.py          démarrage automatique (launchd) et verrou « une seule instance »
+│   ├── service.py          démarrage automatique (launchd / systemd) et verrou « une seule instance »
 │   ├── probe.py            commande « sonde »
 │   └── adapters/           un module par type de site
 │       ├── base.py         interface commune (discover / check / poll)
