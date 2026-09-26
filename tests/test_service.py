@@ -31,11 +31,12 @@ class LaunchdTests(unittest.TestCase):
 
     def test_install_checks(self):
         with tempfile.TemporaryDirectory() as tmp:
-            problems = " ".join(install_problems("/usr/bin/python3", Path(tmp)))
+            problems = " ".join(install_problems("/usr/bin/python3", Path(tmp), platform="darwin"))
             self.assertIn("source .venv/bin/activate", problems)
             self.assertIn("python3 -m pokeget init", problems)
             home = Path.home()
-            problems = " ".join(install_problems("/x/.venv/bin/python3", home / "Documents" / "pokeget"))
+            problems = " ".join(install_problems("/x/.venv/bin/python3", home / "Documents" / "pokeget",
+                                                platform="darwin"))
             self.assertIn("~/Documents", problems)
 
 
