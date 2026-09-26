@@ -5,7 +5,7 @@
   python3 -m pokeget once            vérifie tous les sites une fois (tableau)
   python3 -m pokeget verifier URL    analyse une adresse (Shopify ? JSON-LD ?)
   python3 -m pokeget sonde [URL]     examine les grandes enseignes (ou une adresse)
-  python3 -m pokeget installer       démarrage automatique sur Mac (launchd)
+  python3 -m pokeget installer       démarrage automatique (Mac : launchd, Linux : systemd)
   python3 -m pokeget desinstaller    retire le démarrage automatique
   python3 -m pokeget redemarrer      relance pokeget en arrière-plan (après modif. de config.yaml)
   python3 -m pokeget statut          pokeget tourne-t-il ? dernier signe de vie
@@ -42,7 +42,8 @@ def setup_logging(verbose: bool = False, to_file: bool = True) -> None:
     console = logging.StreamHandler(sys.stdout)
     console.setFormatter(fmt)
     if to_file and not sys.stdout.isatty():
-        # En arrière-plan (launchd), la sortie va dans logs/launchd.log, jamais découpé :
+        # En arrière-plan (launchd / systemd), la sortie va dans logs/launchd.log
+        # (ou logs/service.log), jamais découpé :
         # seulement les erreurs, le détail est déjà dans pokeget.log.
         console.setLevel(logging.ERROR)
     root.addHandler(console)
@@ -164,9 +165,14 @@ def cmd_installer(args) -> None:
     except RuntimeError as exc:
         print(f"❌ {exc}")
         sys.exit(1)
-    print(f"✅ Démarrage automatique installé ({service.PLIST_PATH}).")
-    print("   pokeget tourne maintenant en arrière-plan, et redémarrera tout seul :")
-    print("   à chaque ouverture de session, et s'il s'arrête (au plus une fois par minute).")
+    if sys.platform == "darwin":
+        print(f"✅ Démarrage automatique installé ({service.PLIST_PATH}).")
+        print("   pokeget tourne maintenant en arrière-plan, et redémarrera tout seul :")
+        print("   à chaque ouverture de session, et s'il s'arrête (au plus une fois par minute).")
+    else:
+        print(f"✅ Démarrage automatique installé ({service.UNIT_PATH}).")
+        print("   pokeget tourne maintenant en arrière-plan, et redémarrera tout seul :")
+        print("   au démarrage de la machine, et s'il s'arrête (au plus une fois par minute).")
     print("   Tu peux fermer le Terminal. Vérifie dans 1 minute avec : python3 -m pokeget statut")
 
 
@@ -207,15 +213,15 @@ def ago(ts: float) -> str:
 def cmd_statut(args) -> None:
     from pokeget import service
 
-    print("Démarrage automatique (launchd) : ", end="")
-    if sys.platform != "darwin":
-        print("non disponible (pas un Mac)")
+    print(f"Démarrage automatique ({service.manager()}) : ", end="")
+    if sys.platform != "darwin" and not sys.platform.startswith("linux"):
+        print("non disponible sur ce système")
     elif not service.is_loaded():
         print("non installé (python3 -m pokeget installer)")
     else:
         pid = service.running_pid()
         print(f"installé, pokeget en cours (processus {pid})" if pid else
-              "installé, mais pokeget ne tourne pas en ce moment (voir logs/launchd.log)")
+              f"installé, mais pokeget ne tourne pas en ce moment (voir logs/{service.service_log(ROOT).name})")
 
     lock = service.SingleInstance(LOCK_PATH)
     if lock.acquire():

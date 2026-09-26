@@ -25,6 +25,13 @@ ntfy:
   # « Couper ce produit 1 h ». Tu n'as PAS besoin de t'y abonner.
   topic_controle: "REMPLACE_PAR_INIT_CTL"
 
+# --- Nom de cette machine (facultatif) ---------------------------------
+# Utile si pokeget tourne sur plusieurs machines (ton Mac et un serveur) :
+# ce nom est ajouté aux notifications « 🚀 pokeget démarré » et
+# « ✅ pokeget toujours actif » pour savoir laquelle parle.
+# Exemple : machine: "Mac"   ou   machine: "Serveur Oracle"
+machine: ""
+
 # --- Comportement des alertes ------------------------------------------
 alertes:
   # Alerter aussi quand une précommande s'ouvre (true = oui, false = non)

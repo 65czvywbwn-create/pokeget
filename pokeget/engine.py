@@ -180,6 +180,11 @@ class Engine:
                 self.db.set_meta("last_heartbeat", today)
             await asyncio.sleep(30)
 
+    def titled(self, title: str) -> str:
+        """Ajoute le nom de la machine (option « machine » de config.yaml) quand il y en a un."""
+        machine = getattr(getattr(self, "cfg", None), "machine", "")
+        return f"{title} ({machine})" if machine else title
+
     async def send_heartbeat(self) -> None:
         assert self.db is not None
         counters = self.db.counters()
@@ -190,7 +195,7 @@ class Engine:
             lines.append(f"{a.name} : {checks} vérif., {errors} erreur(s){flag}")
         total, eligible = self.db.product_counts()
         lines.append(f"Produits suivis : {total} (dont {eligible} achetable(s) en ce moment)")
-        await self.notifier.send("✅ pokeget toujours actif", "\n".join(lines), priority=3)
+        await self.notifier.send(self.titled("✅ pokeget toujours actif"), "\n".join(lines), priority=3)
         self.db.reset_counters()
 
     async def send_startup_notice(self) -> None:
@@ -202,7 +207,7 @@ class Engine:
             return
         self.db.set_meta("last_start_notice", str(time.time()))
         names = ", ".join(a.name for a in self.adapters)
-        await self.notifier.send("🚀 pokeget démarré", f"{len(self.adapters)} site(s) surveillé(s) : {names}",
+        await self.notifier.send(self.titled("🚀 pokeget démarré"), f"{len(self.adapters)} site(s) surveillé(s) : {names}",
                                  priority=2)
 
     async def _on_blocked(self, domain: str, since: float, reason: str) -> None:

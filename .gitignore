@@ -5,6 +5,8 @@ __pycache__/
 
 # Fichiers personnels (contiennent tes topics ntfy secrets) : jamais sur GitHub
 config.yaml
+config.*.yaml
+!config.example.yaml
 data/
 logs/
 
