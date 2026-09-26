@@ -21,6 +21,7 @@ from curl_cffi.requests import AsyncSession
 
 from pokeget.adapters.jsonld import parse_jsonld
 from pokeget.config import ROOT
+from pokeget.http import HttpClient
 
 PROBE_DIR = ROOT / "sondes"
 
@@ -80,10 +81,7 @@ def detect_antibot(resp) -> str:
 
 
 def challenged(resp) -> bool:
-    body = resp.text[:60000].lower()
-    return resp.status_code in (403, 429) or any(m in body for m in (
-        "captcha-delivery.com", "validatecaptcha", "px-captcha", "<title>just a moment",
-        "pardon our interruption", "access denied"))
+    return bool(HttpClient._block_reason(resp)) or "access denied" in resp.text[:60000].lower()
 
 
 async def probe_url(session: AsyncSession, site: str, idx: int, url: str) -> Tuple[str, ...]:

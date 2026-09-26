@@ -32,6 +32,11 @@ CAPTCHA_MARKERS = (
     "attention required! | cloudflare",
     "<title>just a moment...</title>",  # Cloudflare
     "cf-chl-bypass",
+    "window._cf_chl_opt",            # Cloudflare : page de défi
+    "gokuprops",                     # AWS WAF (Amazon, Monoprix) : page de défi
+    "awswafintegration.checkforcerefresh",
+    "__blnchallengestore",           # Baleen (Cdiscount) : fausse page 200
+    '"request_fate":"challengejs"',
 )
 
 MAX_BACKOFF_S = 30 * 60
@@ -132,6 +137,8 @@ class HttpClient:
             return "trop de requêtes (429)"
         if code == 403:
             return "accès refusé (403)"
+        if code == 202:  # Amazon / AWS WAF : « requête acceptée », mais c'est une page de défi
+            return "page d'attente anti-robot (202)"
         ctype = (resp.headers.get("content-type") or "").lower()
         if "html" in ctype or code == 503:
             head = resp.text[:30000].lower()

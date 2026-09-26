@@ -1,0 +1,29 @@
+{
+ "data": {
+  "products": {
+   "total_count": 1,
+   "items": [
+    {
+     "sku": "12768539",
+     "name": "Coffret Dresseur d'élite Pokémon : Méga-Evolution Equilibre parfait",
+     "url_key": "coffret-dresseur-d-elite-pokemon-mega-evolution-equilibre-parfait-12768539",
+     "type_id": "simple",
+     "release_date": "2026-03-27 00:00:00",
+     "price_range": {
+      "minimum_price": {
+       "final_price": {
+        "value": 59.99
+       }
+      }
+     },
+     "stock_item_extra": {
+      "front_availability": "unavailable"
+     },
+     "mp_info": {
+      "offers": []
+     }
+    }
+   ]
+  }
+ }
+}

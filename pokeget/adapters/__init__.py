@@ -4,13 +4,27 @@ from __future__ import annotations
 
 from typing import Dict, Type
 
+from pokeget.adapters.auchan import AuchanAdapter
 from pokeget.adapters.base import Adapter
+from pokeget.adapters.carrefour import CarrefourAdapter
+from pokeget.adapters.cultura import CulturaAdapter
 from pokeget.adapters.jsonld import JsonLdAdapter
+from pokeget.adapters.leclerc import LeclercAdapter
+from pokeget.adapters.monoprix import MonoprixAdapter
+from pokeget.adapters.philibert import PhilibertAdapter
 from pokeget.adapters.shopify import ShopifyAdapter
+from pokeget.adapters.ultrajeux import UltraJeuxAdapter
 
 ADAPTERS: Dict[str, Type[Adapter]] = {
     "shopify": ShopifyAdapter,
     "jsonld": JsonLdAdapter,
+    "monoprix": MonoprixAdapter,
+    "auchan": AuchanAdapter,
+    "leclerc": LeclercAdapter,
+    "philibert": PhilibertAdapter,
+    "ultrajeux": UltraJeuxAdapter,
+    "cultura": CulturaAdapter,
+    "carrefour": CarrefourAdapter,
 }
 
 

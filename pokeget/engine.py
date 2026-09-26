@@ -24,6 +24,7 @@ from pokeget.notifier import Notifier
 log = logging.getLogger("pokeget")
 
 CONTROL_POLL_S = 10
+STARTUP_NOTICE_GAP_S = 3600
 
 
 def jitter(seconds: float) -> float:
@@ -116,6 +117,7 @@ class Engine:
                     last_full = started
                 await self.process(adapter, results)
                 self.db.count(adapter.name, checks=1)
+                self.db.set_meta(f"last_ok:{adapter.name}", str(time.time()))
                 log.debug("[%s] %d produit(s) suivi(s), tour en %.1f s", adapter.name, len(results),
                           time.time() - started)
             except DomainPaused:
@@ -170,12 +172,18 @@ class Engine:
         if self.db.get_meta("last_heartbeat") is None:  # tout premier lancement : pas de résumé vide
             self.db.set_meta("last_heartbeat", dt.date.today().isoformat())
         while True:
+            self.db.set_meta("last_alive", str(time.time()))  # signe de vie (commande « statut »)
             now = dt.datetime.now()
             today = now.date().isoformat()
             if (now.hour, now.minute) >= (hh, mm) and self.db.get_meta("last_heartbeat") != today:
                 await self.send_heartbeat()
                 self.db.set_meta("last_heartbeat", today)
             await asyncio.sleep(30)
+
+    def titled(self, title: str) -> str:
+        """Ajoute le nom de la machine (option « machine » de config.yaml) quand il y en a un."""
+        machine = getattr(getattr(self, "cfg", None), "machine", "")
+        return f"{title} ({machine})" if machine else title
 
     async def send_heartbeat(self) -> None:
         assert self.db is not None
@@ -187,8 +195,20 @@ class Engine:
             lines.append(f"{a.name} : {checks} vérif., {errors} erreur(s){flag}")
         total, eligible = self.db.product_counts()
         lines.append(f"Produits suivis : {total} (dont {eligible} achetable(s) en ce moment)")
-        await self.notifier.send("✅ pokeget toujours actif", "\n".join(lines), priority=3)
+        await self.notifier.send(self.titled("✅ pokeget toujours actif"), "\n".join(lines), priority=3)
         self.db.reset_counters()
+
+    async def send_startup_notice(self) -> None:
+        """« pokeget démarré » : utile pour savoir qu'il a redémarré (plantage, redémarrage du Mac).
+        Au plus une fois par heure, pour ne pas spammer si le script redémarre en boucle."""
+        assert self.db is not None
+        last = float(self.db.get_meta("last_start_notice") or 0)
+        if time.time() - last < STARTUP_NOTICE_GAP_S:
+            return
+        self.db.set_meta("last_start_notice", str(time.time()))
+        names = ", ".join(a.name for a in self.adapters)
+        await self.notifier.send(self.titled("🚀 pokeget démarré"), f"{len(self.adapters)} site(s) surveillé(s) : {names}",
+                                 priority=2)
 
     async def _on_blocked(self, domain: str, since: float, reason: str) -> None:
         names = ", ".join(a.name for a in self.adapters if a.domain == domain) or domain
@@ -211,6 +231,7 @@ class Engine:
             return
         log.info("Démarrage : %d site(s) actif(s) : %s", len(self.adapters),
                  ", ".join(f"{a.name} ({a.site.interval:g} s)" for a in self.adapters))
+        await self.send_startup_notice()
         tasks = [asyncio.create_task(self.site_loop(a), name=a.name) for a in self.adapters]
         tasks += [asyncio.create_task(self.control_loop()), asyncio.create_task(self.heartbeat_loop())]
         try:

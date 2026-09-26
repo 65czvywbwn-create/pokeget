@@ -56,6 +56,7 @@ class Config:
     official_seller_only: bool
     sites: List[SiteConfig]
     path: Path = DEFAULT_CONFIG
+    machine: str = ""  # nom affiché dans « démarré » / « toujours actif » (plusieurs machines)
 
     @property
     def active_sites(self) -> List[SiteConfig]:
@@ -175,6 +176,7 @@ def load_config(path: Optional[Path] = None) -> Config:
         official_seller_only=bool(_get(_get(data, "marketplace", {}), "vendeur_officiel_uniquement", True)),
         sites=sites,
         path=path,
+        machine=str(_get(data, "machine", "")).strip(),
     )
 
 
