@@ -248,9 +248,10 @@ et le relance s'il s'arrête.
   Central (Paris) » ou « France South (Marseille) ».
 * **Certains sites bloquent les serveurs** (ils acceptent une connexion de
   particulier mais pas celle d'un centre de données). C'est le cas de
-  Carrefour (Cloudflare) ; Cultura sera aussi gardé sur le Mac par prudence.
-  Tu vérifies site par site avec `once` (étape 7) : un site bloqué depuis le
-  serveur reste surveillé par le Mac.
+  Carrefour (Cloudflare) ; tous les autres, Cultura compris, fonctionnent
+  depuis un serveur Oracle (vérifié en septembre 2026). Tu vérifies site par
+  site avec `once` (étape 7) : un site bloqué depuis le serveur reste
+  surveillé par le Mac.
 * **Oracle peut récupérer une machine gratuite qu'il juge inutilisée.** Si
   ça arrive, tu reçois un e-mail, et le résumé « ✅ pokeget toujours actif
   (Serveur Oracle) » de 9 h n'arrive plus : il suffit de recréer la machine
@@ -263,8 +264,8 @@ ntfy** (tu reçois tout sur le même iPhone) mais **des sites différents** :
 
 | Machine | Sites actifs | `machine:` |
 |---|---|---|
-| Serveur Oracle (24 h/24) | Monpokestore, Monoprix, Auchan, Leclerc, Philibert, UltraJeux | `"Serveur Oracle"` |
-| Mac (quand il est allumé) | Carrefour, Cultura | `"Mac"` |
+| Serveur Oracle (24 h/24) | Monpokestore, Monoprix, Auchan, Leclerc, Philibert, UltraJeux, Cultura | `"Serveur Oracle"` |
+| Mac (quand il est allumé) | Carrefour | `"Mac"` |
 
 Un même site n'est jamais surveillé par les deux : pas de doublon. Le bouton
 « Couper ce produit 1 h » marche dans les deux cas (chaque machine écoute le
@@ -438,7 +439,7 @@ open -e config.serveur.yaml
 Dans `config.serveur.yaml` :
 * mets `machine: "Serveur Oracle"` (ligne à ajouter en haut du fichier si
   elle n'y est pas, sans espace au début) ;
-* mets `actif: false` sur **Carrefour** et **Cultura** ;
+* mets `actif: false` sur **Carrefour** ;
 * laisse les autres sites comme ils sont.
 
 `config.serveur.yaml` contient tes topics secrets : comme `config.yaml`, il
@@ -489,7 +490,7 @@ utilise `sudo`, déjà autorisé pour l'utilisateur `ubuntu`). Tu reçois
 « 🚀 pokeget démarré (Serveur Oracle) » sur l'iPhone. Tu peux taper `exit` :
 pokeget continue de tourner, même Mac éteint.
 
-### Étape 9 : le Mac ne surveille plus que Carrefour et Cultura
+### Étape 9 : le Mac ne surveille plus que Carrefour
 
 Sur le Mac, ouvre ta config habituelle :
 
@@ -499,7 +500,7 @@ open -e config.yaml
 ```
 
 * ajoute `machine: "Mac"` ;
-* mets `actif: false` sur tous les sites **sauf Carrefour et Cultura** (et
+* mets `actif: false` sur tous les sites **sauf Carrefour** (et
   les éventuels sites bloqués depuis le serveur à l'étape 7).
 
 Puis :
