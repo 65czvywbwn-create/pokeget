@@ -7,7 +7,7 @@ import datetime as dt
 import logging
 import random
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Dict, List, Optional, Tuple
 
 from curl_cffi.requests import AsyncSession
@@ -69,6 +69,11 @@ class Engine:
             return Verdict(False, f"vendeur tiers ({p.seller or '?'})")
         return Verdict(True, "ALERTE")
 
+    def _wanted_if_in_stock(self, adapter: Adapter, p: Product) -> bool:
+        """Mériterait-il une alerte s'il était en stock ? (écarte les trop chers, vendeurs tiers…)"""
+        verdict = self.evaluate(adapter, replace(p, status=Status.AVAILABLE))
+        return verdict is not None and verdict.eligible
+
     def known_for(self, adapter: Adapter) -> List[Product]:
         if self.db is None:
             return []
@@ -82,6 +87,9 @@ class Engine:
     async def process(self, adapter: Adapter, results: List[Product]) -> None:
         assert self.db is not None
         min_gap = self.cfg.min_gap_minutes * 60
+        # Pas d'annonce au tout premier tour d'un site : tout y serait « nouveau ».
+        announce = self.cfg.alert_new_listing and self.db.get_meta(f"last_ok:{adapter.name}") is not None
+        new_listings: List[Product] = []
         for p in results:
             if p.status == Status.UNKNOWN:
                 continue
@@ -98,6 +106,11 @@ class Engine:
                 await self.notifier.product_alert(p, d.hkey)
             elif verdict.eligible and d.reason:
                 log.info("[%s] Pas d'alerte pour %s : %s", adapter.name, p.title, d.reason)
+            if announce and d.previous_status is None and not d.alert and self._wanted_if_in_stock(adapter, p):
+                new_listings.append(p)
+        if new_listings:
+            log.info("[%s] %d nouvelle(s) fiche(s) annoncée(s)", adapter.name, len(new_listings))
+            await self.notifier.new_listings(adapter.name, new_listings)
 
     # ------------------------------------------------------------ boucles
     async def site_loop(self, adapter: Adapter) -> None:

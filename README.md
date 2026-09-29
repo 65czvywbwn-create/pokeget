@@ -122,6 +122,7 @@ alertes.
 |---|---|
 | 🟢 `[Site] Produit, prix` | Un produit recherché est achetable : fonce ! |
 | 🟢 `… (précommande)` | Une précommande vient d'ouvrir. |
+| 🆕 `[Site] Produit` | Un produit recherché vient d'apparaître sur un site, pas encore achetable (désactivable avec `nouvelle_fiche: false`). |
 | 🚀 pokeget démarré | pokeget vient de (re)démarrer (au plus une par heure). |
 | ✅ pokeget toujours actif | Résumé quotidien de 9 h : vérifications et erreurs par site. |
 | ⚠️ `[Site] site bloqué` | Le site refuse les vérifications depuis 15 min. |
