@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Iterable, List, Optional
 
 
@@ -30,6 +30,14 @@ def _contains(haystack: str, needle: str) -> bool:
 class Rule:
     keyword: str
     max_price: Optional[float] = None
+    search: bool = True  # lancer une recherche « pokemon <mot> » sur les enseignes
+    with_any: List[str] = field(default_factory=list)  # le nom doit AUSSI contenir un de ces mots
+
+    def matches(self, name: str) -> bool:
+        """name : nom déjà normalisé."""
+        if not _contains(name, self.norm):
+            return False
+        return not self.with_any or any(_contains(name, normalize(w)) for w in self.with_any)
 
     @property
     def norm(self) -> str:
@@ -45,7 +53,9 @@ class Matcher:
     def match(self, title: str, required: Optional[Iterable[str]] = None) -> Optional[Rule]:
         """Renvoie la règle correspondante, ou None si le produit ne nous intéresse pas.
 
-        Si plusieurs mots-clés correspondent, on garde le prix maximum le plus généreux.
+        Si plusieurs mots-clés correspondent, c'est le premier de la liste qui
+        compte : on met donc les types précis (ETB, bundle…) avant les mots-clés
+        généraux (« coffret », « 30 ans »).
         """
         name = normalize(title)
         if any(_contains(name, x) for x in self.exclude):
@@ -53,10 +63,7 @@ class Matcher:
         req = self.required if required is None else [normalize(x) for x in required if normalize(x)]
         if req and not any(_contains(name, x) for x in req):
             return None
-        hits = [r for r in self.rules if _contains(name, r.norm)]
-        if not hits:
-            return None
-        return max(hits, key=lambda r: float("inf") if r.max_price is None else r.max_price)
+        return next((r for r in self.rules if r.matches(name)), None)
 
     def is_excluded(self, title: str) -> bool:
         name = normalize(title)

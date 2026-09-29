@@ -51,18 +51,57 @@ alertes:
 
 # --- Produits recherchés -------------------------------------------------
 produits:
-  # Mots-clés à INCLURE : un produit est retenu si son nom contient au
-  # moins un de ces mots-clés. Majuscules, accents et apostrophes sont
-  # ignorés (« Dresseur d’Élite » = « dresseur d'elite »).
-  # prix_max : prix maximum en euros pour ce mot-clé (supprime la ligne
-  # prix_max pour ne pas mettre de limite).
+  # Mots-clés à INCLURE : un produit est retenu si son nom contient un de
+  # ces mots-clés. Majuscules, accents et apostrophes sont ignorés
+  # (« Dresseur d’Élite » = « dresseur d'elite »).
+  # C'est le PREMIER mot-clé de la liste présent dans le nom qui compte :
+  # les types précis d'abord, les mots-clés généraux (« coffret », « 30 ans »)
+  # à la fin.
+  # prix_max : prix d'origine (prix conseillé) + une petite marge. Au-dessus,
+  #   pas d'alerte : on ne veut que les réassorts au vrai prix.
+  # recherche: false -> le mot-clé filtre les résultats mais ne lance pas de
+  #   recherche dédiée sur les grandes enseignes (moins de requêtes).
+  # avec: [...] -> le nom doit AUSSI contenir un de ces mots (ex. un
+  #   plafond à part pour les bundles « 30 ans »).
   inclure:
-    - mot: "30e anniversaire"
-      prix_max: 90
-    - mot: "30 ans"
-      prix_max: 90
-    - mot: "dresseur d'élite"
+    - mot: "dresseur d'élite"   # ETB, 59,99 €
+      prix_max: 65
+    - mot: "etb"
+      prix_max: 65
+      recherche: false
+    - mot: "ultra premium"      # Collection Ultra-Premium, 129,99 €
+      prix_max: 135
+      recherche: false
+    - mot: "collection premium" # 59,99 à 69,99 €
       prix_max: 70
+      recherche: false
+    - mot: "display"            # 36 boosters
+      prix_max: 240
+    - mot: "bundle"             # bundle 30 ans : jusqu'à 50 €
+      avec: ["30 ans", "30e anniversaire"]
+      prix_max: 50
+      recherche: false
+    - mot: "bundle"             # 6 boosters, 35,99 €
+      prix_max: 40
+    - mot: "pokébox"            # 27,99 €
+      prix_max: 30
+      recherche: false
+    - mot: "mini tin"           # 11,99 €
+      prix_max: 14
+      recherche: false
+    - mot: "tripack"            # 3 boosters, 19,99 €
+      prix_max: 22
+      recherche: false
+    - mot: "tri-pack"
+      prix_max: 22
+      recherche: false
+    - mot: "coffret"            # autres coffrets (collection, classeur…)
+      prix_max: 50
+    - mot: "30 ans"             # autres produits du 30e anniversaire
+      prix_max: 50
+    - mot: "30e anniversaire"
+      prix_max: 50
+      recherche: false
 
   # Mots-clés à EXCLURE : un produit dont le nom contient un de ces mots
   # est ignoré, même s'il contient un mot-clé à inclure.
@@ -74,6 +113,9 @@ produits:
     - "protège-cartes"
     - "classeur"
     - "portfolio"
+    - "peluche"
+    - "figurine"
+    - "lot"          # lots de revendeurs (bundle + sleeves…)
 
   # Le nom du produit doit AUSSI contenir au moins un de ces mots
   # (évite par ex. « Le Livre des 30 ans du Club Dorothée »).
@@ -95,6 +137,8 @@ marketplace:
 #                Sans cette ligne, une valeur par défaut raisonnable
 #                est utilisée (Shopify 20 s, grandes enseignes 50 s,
 #                Amazon 75 s).
+#   sans_prix_max : true pour être prévenu sur ce site même au-dessus
+#                des prix_max (ex. une enseigne qui vend plus cher).
 sites:
 
   # ----- Boutiques Shopify (type: shopify) -----

@@ -92,8 +92,34 @@ class MatchingTests(unittest.TestCase):
         self.assertIsNone(m.match("Protège-cartes Pokémon 30e anniversaire"))  # exclu
         self.assertIsNone(m.match("Livre des 30 ans"))                      # pas « pokemon »
         self.assertIsNotNone(m.match("Livre des 30 ans", required=[]))      # sauf si désactivé par site
-        # Deux règles : on garde la plus généreuse (30 ans n'a pas de limite)
-        self.assertIsNone(m.match("Pokémon 30 ans 30e anniversaire").max_price)
+        # Plusieurs règles : la première de la liste gagne
+        self.assertEqual(m.match("Pokémon 30 ans 30e anniversaire").max_price, 90)
+        self.assertEqual(m.match("Pokémon Coffret Dresseur d'Élite 30 ans").keyword, "dresseur d'élite")
+
+    def test_rule_with_any(self):
+        m = Matcher([Rule("bundle", 50, False, ["30 ans", "30e anniversaire"]), Rule("bundle", 40)], [], ["pokemon"])
+        self.assertEqual(m.match("Pokémon 30 ans - Bundle 6 boosters").max_price, 50)
+        self.assertEqual(m.match("Bundle Pokémon 30ème Anniversaire").max_price, 50)
+        self.assertEqual(m.match("Pokémon Bundle ME05 Nuit Noire").max_price, 40)
+
+    def test_site_without_price_cap(self):
+        from types import SimpleNamespace
+        rule = Rule("bundle", 40)
+        engine = Engine.__new__(Engine)
+        engine.cfg = SimpleNamespace(alert_preorder=True, official_seller_only=True)
+        engine.matcher = Matcher([rule], [], [])
+        p = Product("KJ", "1", "Pokémon 30 ans - Bundle", "http://x", price=42.99, status=Status.AVAILABLE)
+        adapter = SimpleNamespace(rule_for=lambda _p: rule, marketplace=False, site=SimpleNamespace(raw={}))
+        self.assertFalse(engine.evaluate(adapter, p).eligible)  # trop cher
+        adapter.site.raw["sans_prix_max"] = True
+        self.assertTrue(engine.evaluate(adapter, p).eligible)
+
+    def test_search_terms(self):
+        from pokeget.adapters.retail import RetailerAdapter
+        m = Matcher([Rule("dresseur d'élite", 65), Rule("tripack", 22, search=False), Rule("pokemon 30 ans")],
+                    [], ["pokemon"])
+        self.assertEqual(RetailerAdapter.default_terms(type("A", (), {"matcher": m})()),
+                         ["pokemon dresseur d'élite", "pokemon 30 ans"])
 
 
 class ParsingTests(unittest.TestCase):

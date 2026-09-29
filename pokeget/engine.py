@@ -63,7 +63,8 @@ class Engine:
             return Verdict(False, "précommande (alertes désactivées)")
         if p.status not in (Status.AVAILABLE, Status.PREORDER):
             return Verdict(False, "statut inconnu")
-        if rule and rule.max_price is not None and p.price is not None and p.price > rule.max_price:
+        if (rule and rule.max_price is not None and p.price is not None and p.price > rule.max_price
+                and not adapter.site.raw.get("sans_prix_max")):
             return Verdict(False, f"trop cher (max {format_price(rule.max_price)})")
         if adapter.marketplace and self.cfg.official_seller_only and not p.official_seller:
             return Verdict(False, f"vendeur tiers ({p.seller or '?'})")
