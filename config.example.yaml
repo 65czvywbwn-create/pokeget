@@ -61,6 +61,8 @@ produits:
   #   pas d'alerte : on ne veut que les réassorts au vrai prix.
   # recherche: false -> le mot-clé filtre les résultats mais ne lance pas de
   #   recherche dédiée sur les grandes enseignes (moins de requêtes).
+  # avec: [...] -> le nom doit AUSSI contenir un de ces mots (ex. un
+  #   plafond à part pour les bundles « 30 ans »).
   inclure:
     - mot: "dresseur d'élite"   # ETB, 59,99 €
       prix_max: 65
@@ -75,6 +77,10 @@ produits:
       recherche: false
     - mot: "display"            # 36 boosters
       prix_max: 240
+    - mot: "bundle"             # bundle 30 ans : jusqu'à 50 €
+      avec: ["30 ans", "30e anniversaire"]
+      prix_max: 50
+      recherche: false
     - mot: "bundle"             # 6 boosters, 35,99 €
       prix_max: 40
     - mot: "pokébox"            # 27,99 €
@@ -131,6 +137,8 @@ marketplace:
 #                Sans cette ligne, une valeur par défaut raisonnable
 #                est utilisée (Shopify 20 s, grandes enseignes 50 s,
 #                Amazon 75 s).
+#   sans_prix_max : true pour être prévenu sur ce site même au-dessus
+#                des prix_max (ex. une enseigne qui vend plus cher).
 sites:
 
   # ----- Boutiques Shopify (type: shopify) -----
