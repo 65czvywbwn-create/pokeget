@@ -19,7 +19,7 @@ from pokeget.config import SiteConfig
 from pokeget.db import Database
 from pokeget.engine import Engine
 from pokeget.http import Blocked, HttpClient
-from pokeget.matching import Matcher, Rule, normalize
+from pokeget.matching import Matcher, Rule, asian_edition, normalize
 from pokeget.models import Product, Status
 from pokeget.notifier import Notifier
 
@@ -114,7 +114,14 @@ class MatchingTests(unittest.TestCase):
         adapter.site.raw["sans_prix_max"] = True
         self.assertTrue(engine.evaluate(adapter, p).eligible)
 
-    def test_search_terms(self):
+    def test_asian_edition(self):
+        base = "https://www.philibertnet.com/fr/pokemon/"
+        self.assertTrue(asian_edition(base + "181330-pokemon-storm-emeralda-display-4521329462233.html"))
+        self.assertTrue(asian_edition(base + "180425-pokemon-black-bolt-display-8800286278016.html"))
+        self.assertTrue(asian_edition(base + "181990-pokemon-151c-vol4-display-6977321121599.html"))
+        self.assertFalse(asian_edition(base + "175000-pokemon-me04-display-0820650859366.html"))
+        self.assertFalse(asian_edition("https://www.monpokestore.fr/products/display-me05"))
+
         from pokeget.adapters.retail import RetailerAdapter
         m = Matcher([Rule("dresseur d'élite", 65), Rule("tripack", 22, search=False), Rule("pokemon 30 ans")],
                     [], ["pokemon"])

@@ -64,19 +64,29 @@ produits:
   # avec: [...] -> le nom doit AUSSI contenir un de ces mots (ex. un
   #   plafond à part pour les bundles « 30 ans »).
   inclure:
+    # Uniquement des produits de cartes à collectionner (FR ou EN).
     - mot: "dresseur d'élite"   # ETB, 59,99 €
       prix_max: 65
+    - mot: "elite trainer box"  # ETB anglaise
+      prix_max: 65
+      recherche: false
     - mot: "etb"
       prix_max: 65
       recherche: false
-    - mot: "ultra premium"      # Collection Ultra-Premium, 129,99 €
+    - mot: "ultra premium"      # Collection Ultra-Premium (UPC), 129,99 €
       prix_max: 135
       recherche: false
     - mot: "collection premium" # 59,99 à 69,99 €
       prix_max: 70
       recherche: false
+    - mot: "premium collection" # version anglaise
+      prix_max: 70
+      recherche: false
     - mot: "display"            # 36 boosters
       prix_max: 240
+    - mot: "booster box"        # display anglaise
+      prix_max: 240
+      recherche: false
     - mot: "bundle"             # bundle 30 ans : jusqu'à 50 €
       avec: ["30 ans", "30e anniversaire"]
       prix_max: 50
@@ -86,20 +96,32 @@ produits:
     - mot: "pokébox"            # 27,99 €
       prix_max: 30
       recherche: false
+    - mot: "pokebox"
+      prix_max: 30
+      recherche: false
     - mot: "mini tin"           # 11,99 €
       prix_max: 14
       recherche: false
+    - mot: "tin"                # pokébox métal, ~25 €
+      prix_max: 30
     - mot: "tripack"            # 3 boosters, 19,99 €
       prix_max: 22
       recherche: false
     - mot: "tri-pack"
       prix_max: 22
       recherche: false
-    - mot: "coffret"            # autres coffrets (collection, classeur…)
+    - mot: "blister"            # 1 à 3 boosters sous blister
+      prix_max: 22
+    - mot: "coffret"            # autres coffrets, seulement s'ils sont de cartes
+      avec: ["carte", "cartes", "jcc", "tcg", "booster", "boosters", "collection", "premium", "dresseur", "ex", "tin", "illustration", "academie de combat", "etb", "bundle", "display", "pokebox"]
       prix_max: 50
-    - mot: "30 ans"             # autres produits du 30e anniversaire
+    - mot: "booster"            # booster à l'unité, 6,99 €
+      prix_max: 8
+    - mot: "30 ans"             # autres produits de cartes du 30e anniversaire
+      avec: ["carte", "cartes", "jcc", "tcg", "booster", "boosters", "collection", "premium", "dresseur", "ex", "tin", "illustration", "academie de combat", "etb", "bundle", "display", "pokebox"]
       prix_max: 50
     - mot: "30e anniversaire"
+      avec: ["carte", "cartes", "jcc", "tcg", "booster", "boosters", "collection", "premium", "dresseur", "ex", "tin", "illustration", "academie de combat", "etb", "bundle", "display", "pokebox"]
       prix_max: 50
       recherche: false
 
@@ -116,6 +138,71 @@ produits:
     - "peluche"
     - "figurine"
     - "lot"          # lots de revendeurs (bundle + sleeves…)
+    # produits dérivés qui ne sont pas des cartes
+    - "figurines"
+    - "construction"
+    - "manga"
+    - "tomes"
+    - "mug"
+    - "quiz"
+    - "cherche et trouve"
+    - "pinceau"
+    - "abystyle"
+    - "montre"
+    - "puzzle"
+    - "livre"
+    - "jeu video"
+    - "nintendo"
+    - "switch"
+    - "console"
+    - "amiibo"
+    - "vetement"
+    - "t shirt"
+    - "sac"
+    - "lampe"
+    - "protection"
+    - "acrylique"
+    # autres jeux de cartes (Monpokestore en vend)
+    - "yu gi oh"
+    - "magic"
+    - "one piece"
+    - "lorcana"
+    - "altered"
+    - "force of will"
+    - "riftbound"
+    - "dragon ball"
+    - "digimon"
+    - "star wars"
+    - "flesh and blood"
+    - "union arena"
+    - "gundam"
+    # seulement français et anglais : autres langues exclues
+    - "jap"
+    - "jp"
+    - "japonais"
+    - "japonaise"
+    - "japanese"
+    - "japan"
+    - "chinois"
+    - "chinoise"
+    - "chinese"
+    - "cn"
+    - "coreen"
+    - "coreenne"
+    - "korean"
+    - "kr"
+    - "allemand"
+    - "german"
+    - "deutsch"
+    - "italien"
+    - "italian"
+    - "espagnol"
+    - "spanish"
+    - "thai"
+    - "indonesien"
+    - "indonesian"
+    - "30 boosters"  # formats japonais
+    - "gem pack"     # format chinois
 
   # Le nom du produit doit AUSSI contenir au moins un de ces mots
   # (évite par ex. « Le Livre des 30 ans du Club Dorothée »).
@@ -152,7 +239,7 @@ sites:
     type: shopify
     domaine: "www.monpokestore.fr"
     actif: true
-    doit_contenir: []
+    doit_contenir: []   # noms sans « Pokémon » ; les autres jeux sont exclus plus haut
 
   # ----- Grandes enseignes (un type dédié par enseigne) -----
   # Par défaut, le script lance une recherche « pokemon + mot-clé » pour

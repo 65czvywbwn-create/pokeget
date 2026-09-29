@@ -68,3 +68,17 @@ class Matcher:
     def is_excluded(self, title: str) -> bool:
         name = normalize(title)
         return any(_contains(name, x) for x in self.exclude)
+
+
+# Préfixes de codes-barres EAN-13 des éditions asiatiques (le pays d'origine
+# de l'éditeur) : 45/49 Japon, 880 Corée, 690-699 Chine, 471 Taïwan,
+# 489 Hong Kong, 885 Thaïlande, 899 Indonésie. Les éditions françaises et
+# anglaises commencent par 0820650 (The Pokémon Company International).
+_ASIAN_EAN = re.compile(r"(?<!\d)(?:45|49|880|69\d|471|489|885|899)\d{9,11}(?!\d)")
+_EAN_IN_URL = re.compile(r"(?<!\d)(\d{13})(?:\.html?)?(?:[/?#]|$)")
+
+
+def asian_edition(url: str) -> bool:
+    """True si l'URL finit par le code-barres d'une édition asiatique (ex. Philibert)."""
+    m = _EAN_IN_URL.search(url or "")
+    return bool(m and _ASIAN_EAN.fullmatch(m.group(1)))
