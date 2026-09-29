@@ -39,6 +39,10 @@ alertes:
   # Délai minimum entre deux alertes pour un même produit (anti-spam si
   # un site hésite entre « dispo » et « rupture »)
   delai_min_entre_alertes_minutes: 10
+  # Prévenir (notification discrète) quand un produit recherché apparaît
+  # pour la première fois sur un site, même en rupture : utile pour savoir
+  # quels sites vont vendre une nouveauté avant qu'elle soit en stock.
+  nouvelle_fiche: true
   # Heure du résumé quotidien « toujours actif »
   heure_resume_quotidien: "09:00"
   # Au bout de combien de minutes de blocage (403, 429, captcha) un site

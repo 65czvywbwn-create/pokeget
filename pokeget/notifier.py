@@ -85,6 +85,22 @@ class Notifier:
         ]
         return await self.send(title, "\n".join(lines), priority=5, click=p.buy_url or p.url, actions=actions)
 
+    async def new_listings(self, site: str, products: List[Product]) -> bool:
+        """Fiches recherchées apparues sur un site (pas encore achetables)."""
+        if len(products) == 1:
+            p = products[0]
+            title = f"🆕 [{site}] {p.title}"
+            lines = [f"Nouvelle fiche repérée ({p.status.value}, {format_price(p.price)})."]
+            click = p.url
+        else:
+            title = f"🆕 [{site}] {len(products)} nouvelles fiches"
+            lines = [f"• {p.title} ({p.status.value}, {format_price(p.price)})" for p in products[:8]]
+            if len(products) > 8:
+                lines.append(f"… et {len(products) - 8} autre(s)")
+            click = None
+        lines.append("Tu recevras l'alerte 🟢 dès qu'elle sera achetable.")
+        return await self.send(title, "\n".join(lines), priority=3, click=click)
+
     async def close(self) -> None:
         if self._session is not None:
             await self._session.close()

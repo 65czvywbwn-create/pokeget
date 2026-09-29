@@ -218,6 +218,38 @@ class EndToEndTests(unittest.TestCase):
         await engine.notifier.close()
         db.close()
 
+    def test_new_listing_notification(self):
+        asyncio.run(self._new_listing())
+
+    async def _new_listing(self):
+        catalog = [shop_product(1, "Pokémon ETB 30e Anniversaire", False)]
+        self.web.json("/products.json", {"products": catalog})
+        engine, db = self.make_engine()
+
+        await self.run_cycle(engine)
+        self.assertEqual(self.web.posts, [])  # premier tour du site : pas d'annonce
+        db.set_meta("last_ok:Boutique", "1")
+
+        catalog += [shop_product(2, "Pokémon Bundle 30e Anniversaire", False),
+                    shop_product(3, "Pokémon Display 30e Anniversaire", False, price="199.00")]  # trop cher
+        self.web.json("/products.json", {"products": catalog})
+        await self.run_cycle(engine)
+        self.assertEqual(len(self.web.posts), 1)
+        n = self.web.posts[0]
+        self.assertEqual(n["title"], "🆕 [Boutique] Pokémon Bundle 30e Anniversaire")
+        self.assertEqual(n["priority"], 3)
+
+        await self.run_cycle(engine)
+        self.assertEqual(len(self.web.posts), 1)  # annoncée une seule fois
+
+        catalog[1]["variants"][0]["available"] = True
+        self.web.json("/products.json", {"products": catalog})
+        await self.run_cycle(engine)
+        self.assertEqual(self.web.posts[-1]["title"][:1], "🟢")  # puis l'alerte de stock normale
+        await engine.http.close()
+        await engine.notifier.close()
+        db.close()
+
     def test_shopify_quick_rounds(self):
         asyncio.run(self._quick_rounds())
 

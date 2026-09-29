@@ -57,6 +57,7 @@ class Config:
     sites: List[SiteConfig]
     path: Path = DEFAULT_CONFIG
     machine: str = ""  # nom affiché dans « démarré » / « toujours actif » (plusieurs machines)
+    alert_new_listing: bool = True  # prévenir quand une fiche correspondante apparaît sur un site
 
     @property
     def active_sites(self) -> List[SiteConfig]:
@@ -177,6 +178,7 @@ def load_config(path: Optional[Path] = None) -> Config:
         sites=sites,
         path=path,
         machine=str(_get(data, "machine", "")).strip(),
+        alert_new_listing=bool(_get(alertes, "nouvelle_fiche", True)),
     )
 
 
