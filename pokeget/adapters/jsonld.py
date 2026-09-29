@@ -187,8 +187,13 @@ class JsonLdAdapter(Adapter):
         if isinstance(rech, dict) and rech.get("url"):
             limit = int(rech.get("max_fiches") or 15)
             links: List[str] = []
+            urls: List[str] = []
             for rule in self.matcher.rules:
-                url = str(rech["url"]).replace("{q}", quote_plus(rule.keyword))
+                if rule.search or "{q}" not in str(rech["url"]):
+                    url = str(rech["url"]).replace("{q}", quote_plus(rule.keyword))
+                    if url not in urls:
+                        urls.append(url)
+            for url in urls:
                 resp = await self.http.get(url)
                 links += [l for l in self._search_links(resp.text, url) if l not in links]
             already = {p.pid for p in products}

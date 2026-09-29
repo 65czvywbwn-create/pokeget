@@ -94,6 +94,8 @@ class RetailerAdapter(Adapter):
         """Recherches par défaut : chaque mot-clé, précédé de « pokemon » s'il n'y est pas."""
         terms = []
         for rule in self.matcher.rules:
+            if not rule.search:
+                continue
             term = rule.keyword if "pokemon" in rule.norm.split() else f"pokemon {rule.keyword}"
             if term not in terms:
                 terms.append(term)

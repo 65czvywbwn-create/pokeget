@@ -129,7 +129,7 @@ def load_config(path: Optional[Path] = None) -> Config:
                 max_price = float(str(max_price).replace(",", "."))
             except ValueError as exc:
                 raise ConfigError(f"prix_max de « {item['mot']} » doit être un nombre (ex. 89.90)") from exc
-        rules.append(Rule(str(item["mot"]), max_price))
+        rules.append(Rule(str(item["mot"]), max_price, bool(item.get("recherche", True))))
     if not rules:
         raise ConfigError("produits.inclure est vide : ajoute au moins un mot-clé.")
 

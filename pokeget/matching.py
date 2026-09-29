@@ -30,6 +30,7 @@ def _contains(haystack: str, needle: str) -> bool:
 class Rule:
     keyword: str
     max_price: Optional[float] = None
+    search: bool = True  # lancer une recherche « pokemon <mot> » sur les enseignes
 
     @property
     def norm(self) -> str:
@@ -45,7 +46,9 @@ class Matcher:
     def match(self, title: str, required: Optional[Iterable[str]] = None) -> Optional[Rule]:
         """Renvoie la règle correspondante, ou None si le produit ne nous intéresse pas.
 
-        Si plusieurs mots-clés correspondent, on garde le prix maximum le plus généreux.
+        Si plusieurs mots-clés correspondent, c'est le premier de la liste qui
+        compte : on met donc les types précis (ETB, bundle…) avant les mots-clés
+        généraux (« coffret », « 30 ans »).
         """
         name = normalize(title)
         if any(_contains(name, x) for x in self.exclude):
@@ -53,10 +56,7 @@ class Matcher:
         req = self.required if required is None else [normalize(x) for x in required if normalize(x)]
         if req and not any(_contains(name, x) for x in req):
             return None
-        hits = [r for r in self.rules if _contains(name, r.norm)]
-        if not hits:
-            return None
-        return max(hits, key=lambda r: float("inf") if r.max_price is None else r.max_price)
+        return next((r for r in self.rules if _contains(name, r.norm)), None)
 
     def is_excluded(self, title: str) -> bool:
         name = normalize(title)

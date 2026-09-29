@@ -92,8 +92,16 @@ class MatchingTests(unittest.TestCase):
         self.assertIsNone(m.match("Protège-cartes Pokémon 30e anniversaire"))  # exclu
         self.assertIsNone(m.match("Livre des 30 ans"))                      # pas « pokemon »
         self.assertIsNotNone(m.match("Livre des 30 ans", required=[]))      # sauf si désactivé par site
-        # Deux règles : on garde la plus généreuse (30 ans n'a pas de limite)
-        self.assertIsNone(m.match("Pokémon 30 ans 30e anniversaire").max_price)
+        # Plusieurs règles : la première de la liste gagne
+        self.assertEqual(m.match("Pokémon 30 ans 30e anniversaire").max_price, 90)
+        self.assertEqual(m.match("Pokémon Coffret Dresseur d'Élite 30 ans").keyword, "dresseur d'élite")
+
+    def test_search_terms(self):
+        from pokeget.adapters.retail import RetailerAdapter
+        m = Matcher([Rule("dresseur d'élite", 65), Rule("tripack", 22, search=False), Rule("pokemon 30 ans")],
+                    [], ["pokemon"])
+        self.assertEqual(RetailerAdapter.default_terms(type("A", (), {"matcher": m})()),
+                         ["pokemon dresseur d'élite", "pokemon 30 ans"])
 
 
 class ParsingTests(unittest.TestCase):
