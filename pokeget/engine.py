@@ -17,7 +17,7 @@ from pokeget.adapters.base import Adapter
 from pokeget.config import Config
 from pokeget.db import Database
 from pokeget.http import Blocked, DomainPaused, HttpClient
-from pokeget.matching import Matcher
+from pokeget.matching import Matcher, asian_edition
 from pokeget.models import Product, Status, format_price
 from pokeget.notifier import Notifier
 
@@ -57,6 +57,8 @@ class Engine:
         rule = adapter.rule_for(p)
         if rule is None and not (p.forced and not self.matcher.is_excluded(p.title)):
             return None
+        if not p.forced and asian_edition(p.url):
+            return None  # seulement les éditions françaises et anglaises
         if p.status == Status.OUT:
             return Verdict(False, "rupture")
         if p.status == Status.PREORDER and not self.cfg.alert_preorder:
