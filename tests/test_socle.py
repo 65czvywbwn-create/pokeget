@@ -13,7 +13,7 @@ import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from pokeget.adapters.jsonld import parse_jsonld
+from pokeget.adapters.jsonld import parse_jsonld, parse_nuxt_product
 from pokeget.adapters.shopify import ShopifyAdapter, parse_shopify_product
 from pokeget.config import SiteConfig
 from pokeget.db import Database
@@ -154,6 +154,26 @@ class ParsingTests(unittest.TestCase):
         self.assertEqual(parse_jsonld('<script type="application/ld+json">{"@type":"Product","name":"x",'
                                       '"offers":{"availability":"PreOrder","price":1}}</script>')["status"],
                          Status.PREORDER)
+
+
+    def test_nuxt_fallback(self):
+        def page(published, on_web, preorder=False):
+            data = [{"product": 1},
+                    {"ref": 2, "label": 3, "availability": 4, "price": 6, "isPublished": 8,
+                     "isEmbargo": 9, "isPreorder": 10},
+                    "1034922", "Pokémon 30 ans - Bundle 6 boosters",
+                    ["Reactive", 5], {"isAvailableOnWeb": 7, "isAvailableForShipFromStore": 9},
+                    {"price": 11}, on_web, published, False, preorder, 42.99 if published else 0]
+            return f'<script type="application/json" id="__NUXT_DATA__">{json.dumps(data)}</script>'
+        url = "https://www.king-jouet.com/jeu-jouet/x/ref-1034922-pokemon-30-ans-bundle.htm"
+        info = parse_nuxt_product(page(True, True), url)
+        self.assertEqual((info["name"], info["status"], info["price"]),
+                         ("Pokémon 30 ans - Bundle 6 boosters", Status.AVAILABLE, 42.99))
+        self.assertEqual(parse_nuxt_product(page(True, True, preorder=True), url)["status"], Status.PREORDER)
+        self.assertEqual(parse_nuxt_product(page(True, False), url)["status"], Status.OUT)
+        unpublished = parse_nuxt_product(page(False, True), url)
+        self.assertEqual((unpublished["status"], unpublished["price"]), (Status.OUT, None))
+        self.assertIsNone(parse_nuxt_product(page(True, True), url.replace("1034922", "1")))
 
 
 class DatabaseTests(unittest.TestCase):

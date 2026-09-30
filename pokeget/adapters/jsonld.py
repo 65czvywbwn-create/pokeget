@@ -22,6 +22,8 @@ ITEMPROP_AVAIL_RE = re.compile(
 OG_TITLE_RE = re.compile(r"<meta[^>]+property=[\"']og:title[\"'][^>]+content=[\"']([^\"']+)", re.I)
 TITLE_RE = re.compile(r"<title[^>]*>(.*?)</title>", re.S | re.I)
 HREF_RE = re.compile(r"href=[\"']([^\"'#]+)", re.I)
+NUXT_RE = re.compile(r"<script[^>]+id=[\"']__NUXT_DATA__[\"'][^>]*>(.*?)</script>", re.S | re.I)
+REF_RE = re.compile(r"ref-(\d+)")
 
 AVAILABILITY = {
     "instock": Status.AVAILABLE,
@@ -122,6 +124,48 @@ def parse_jsonld(page: str) -> Optional[Dict[str, Any]]:
     }
 
 
+def _devalue(data: List[Any], index: Any, depth: int = 0) -> Any:
+    """Reconstruit une valeur du format « devalue » de Nuxt (tableau plat d'index)."""
+    if depth > 8 or isinstance(index, bool) or not isinstance(index, int) or not 0 <= index < len(data):
+        return None
+    value = data[index]
+    if isinstance(value, dict):
+        return {k: _devalue(data, v, depth + 1) for k, v in value.items()}
+    if isinstance(value, list):
+        if value and value[0] in ("Reactive", "ShallowReactive", "Ref", "ShallowRef"):
+            return _devalue(data, value[1], depth + 1)
+        return [_devalue(data, v, depth + 1) for v in value]
+    return value
+
+
+def parse_nuxt_product(page: str, url: str) -> Optional[Dict[str, Any]]:
+    """Secours pour les sites Nuxt (King Jouet) qui retirent le JSON-LD
+    quand la fiche n'est pas en vente : lit les données de la page."""
+    m, ref = NUXT_RE.search(page), REF_RE.search(url)
+    if not m or not ref:
+        return None
+    try:
+        data = json.loads(m.group(1))
+    except ValueError:
+        return None
+    for i, node in enumerate(data):
+        if not (isinstance(node, dict) and "availability" in node and "ref" in node):
+            continue
+        prod = _devalue(data, i)
+        if str(prod.get("ref")) != ref.group(1):
+            continue
+        avail = prod.get("availability") or {}
+        on_web = avail.get("isAvailableOnWeb") or avail.get("isAvailableForShipFromStore")
+        if prod.get("isPublished") is False or prod.get("isEmbargo") or not on_web:
+            status = Status.OUT
+        else:
+            status = Status.PREORDER if prod.get("isPreorder") else Status.AVAILABLE
+        price = _price((prod.get("price") or {}).get("price"))
+        return {"name": str(prod.get("label") or "").strip(), "status": status,
+                "price": price if price else None, "seller": None, "sku": ref.group(1)}
+    return None
+
+
 def page_title(page: str) -> str:
     m = OG_TITLE_RE.search(page) or TITLE_RE.search(page)
     return htmllib.unescape(m.group(1)).strip() if m else ""
@@ -140,7 +184,7 @@ class JsonLdAdapter(Adapter):
         return clean_url(p.url) in {clean_url(str(u)) for u in self.site.raw.get("fiches") or []}
 
     def product_from_page(self, url: str, page: str, forced: bool = False) -> Product:
-        info = parse_jsonld(page)
+        info = parse_jsonld(page) or parse_nuxt_product(page, url)
         if info is None:
             # Dernier recours : microdonnées itemprop="availability"
             m = ITEMPROP_AVAIL_RE.search(page)
