@@ -107,7 +107,7 @@ class ShopifyAdapter(Adapter):
     async def check(self, product: Product) -> Product:
         handle = product.extra.get("handle") or product.url.rstrip("/").rsplit("/", 1)[-1]
         resp = await self.http.get(f"{self.base_url}/products/{handle}.js", allow_404=True)
-        if resp.status_code == 404:  # produit retiré ou masqué quand il est épuisé
+        if resp.status_code in (404, 410):  # produit retiré ou masqué quand il est épuisé
             product.status = Status.OUT
             return product
         return parse_shopify_product(resp.json(), self.name, self.base_url)

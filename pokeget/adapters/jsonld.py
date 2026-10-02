@@ -206,17 +206,19 @@ class JsonLdAdapter(Adapter):
 
     async def fetch_product(self, url: str, forced: bool = False) -> Product:
         resp = await self.http.get(url, allow_404=True)
-        if resp.status_code == 404:
+        if resp.status_code in (404, 410):  # 410 : fiche supprimée (King Jouet)
             return Product(site=self.name, pid=clean_url(url), title=url, url=url, buy_url=url,
                            status=Status.OUT, forced=forced)
         return self.product_from_page(url, resp.text, forced)
 
     def _search_links(self, page: str, base: str) -> List[str]:
-        motif = str((self.site.raw.get("recherche") or {}).get("motif") or "")
+        # motif : un texte, ou une liste de textes que l'adresse doit TOUS contenir
+        motif = (self.site.raw.get("recherche") or {}).get("motif") or []
+        motifs = [str(m) for m in (motif if isinstance(motif, list) else [motif]) if m]
         links = []
         for href in HREF_RE.findall(page):
             full = clean_url(urljoin(base, htmllib.unescape(href)))
-            if urlsplit(full).hostname != self.domain or (motif and motif not in full):
+            if urlsplit(full).hostname != self.domain or not all(m in full for m in motifs):
                 continue
             if full not in links:
                 links.append(full)
