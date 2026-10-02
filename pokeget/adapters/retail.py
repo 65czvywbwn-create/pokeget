@@ -132,7 +132,7 @@ class RetailerAdapter(Adapter):
 
     async def check(self, product: Product) -> Product:
         resp = await self.http.get(self.check_url(product), headers=self.request_headers, allow_404=True)
-        if resp.status_code == 404:  # fiche supprimée : plus achetable
+        if resp.status_code in (404, 410):  # fiche supprimée : plus achetable
             product.status = Status.OUT
             return product
         parsed = self.parse_product(resp.text, product.url)
