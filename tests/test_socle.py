@@ -114,6 +114,20 @@ class MatchingTests(unittest.TestCase):
         adapter.site.raw["sans_prix_max"] = True
         self.assertTrue(engine.evaluate(adapter, p).eligible)
 
+    def test_search_motifs(self):
+        from types import SimpleNamespace
+        from pokeget.adapters.jsonld import JsonLdAdapter
+        adapter = JsonLdAdapter.__new__(JsonLdAdapter)
+        adapter.site = SimpleNamespace(domain="www.king-jouet.com",
+                                       raw={"recherche": {"motif": ["/ref-", "30-ans"]}})
+        page = ('<a href="/pokemon-30-ans-tcg.htm">annonce</a>'
+                '<a href="/jeu-jouet/x/ref-1-coffret-pokemon-30-ans-nymphali.htm">a</a>'
+                '<a href="/jeu-jouet/x/ref-2-booster-pokemon-me05.htm">b</a>')
+        self.assertEqual(adapter._search_links(page, "https://www.king-jouet.com/"),
+                         ["https://www.king-jouet.com/jeu-jouet/x/ref-1-coffret-pokemon-30-ans-nymphali.htm"])
+        adapter.site.raw["recherche"]["motif"] = "booster"
+        self.assertEqual(len(adapter._search_links(page, "https://www.king-jouet.com/")), 1)
+
     def test_asian_edition(self):
         base = "https://www.philibertnet.com/fr/pokemon/"
         self.assertTrue(asian_edition(base + "181330-pokemon-storm-emeralda-display-4521329462233.html"))

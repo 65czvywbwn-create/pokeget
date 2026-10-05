@@ -124,7 +124,7 @@ class HttpClient:
                 await self._mark_blocked(domain, reason)
                 raise Blocked(f"{domain} : {reason}")
             await self._mark_ok(domain)
-            if resp.status_code == 404 and allow_404:
+            if resp.status_code in (404, 410) and allow_404:  # 410 : page supprimée
                 return resp
             if resp.status_code >= 400:
                 raise RuntimeError(f"HTTP {resp.status_code} sur {url}")
