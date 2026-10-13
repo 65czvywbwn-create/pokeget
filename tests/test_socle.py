@@ -190,6 +190,28 @@ class ParsingTests(unittest.TestCase):
         self.assertIsNone(parse_nuxt_product(page(True, True), url.replace("1034922", "1")))
 
 
+    def test_chaoscards_listing(self):
+        from pokeget.adapters.chaoscards import parse_listing
+
+        def card(slug, title, price, avail="", wrapper="out-of-stock"):
+            span = f'<p class="prod-el__availability"><span class="prod-el__availability-{avail}">x</span></p>' if avail else ""
+            return (f'<div class="prod-el"><div class="prod-el__wrapper"><a class="prod-el__link" '
+                    f'href="/prod/collection-boxes-pokemon/{slug}" title="{title}" ><h6>{title}</h6>'
+                    f'<p class="prod-el__pricing"><span class="prod-el__pricing-price">&#163;{price}</span></p>'
+                    f'{span}</a><div class="prod-el__quick-wrapper prod-el__quick-wrapper--{wrapper}"></div></div></div>')
+        page = (card("upc-night", "Pokemon 30th Celebration Ultra Premium Collection - Night", "169.99", "soon")
+                + card("upc-day", "Pokemon 30th Celebration Ultra Premium Collection - Day", "169.99", "preorder")
+                + card("partner", "Pokemon First Partner Illustration Collection", "47.95", wrapper="in-stock")
+                + card("upc-night", "Pokemon 30th Celebration Ultra Premium Collection - Night", "169.99", "low", "in-stock"))
+        got = {p.pid.rsplit("/", 1)[-1]: p for p in parse_listing(page, "Chaos Cards", rate=1.0)}
+        self.assertEqual(got["upc-day"].status, Status.PREORDER)
+        self.assertEqual(got["partner"].status, Status.AVAILABLE)
+        self.assertEqual(got["upc-night"].status, Status.AVAILABLE)  # meilleure des deux vignettes
+        self.assertEqual((got["upc-day"].price, got["upc-day"].extra["prix_affiche"]), (169.99, "169,99 £"))
+        self.assertEqual(got["partner"].url,
+                         "https://www.chaoscards.co.uk/prod/collection-boxes-pokemon/partner")
+
+
 class DatabaseTests(unittest.TestCase):
     def test_transitions(self):
         with tempfile.TemporaryDirectory() as tmp:

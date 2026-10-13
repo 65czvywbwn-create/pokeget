@@ -590,6 +590,7 @@ Si Oracle refuse l'inscription malgré tout, garde pokeget sur le Mac
 | UltraJeux | `ultrajeux` | catégorie « ETB Coffret Dresseur d'Elite » | lien qui ajoute directement l'article au panier |
 | Cultura | `cultura` | recherche par mot-clé, via l'API publique de la boutique | marketplace ; le stock des magasins (retrait) est ignoré |
 | Carrefour | `carrefour` | recherche par mot-clé | marketplace ; protégé par Cloudflare : répond par moments seulement, d'où un tour toutes les 5 min |
+| Chaos Cards (UK) | `chaoscards` | calendrier des sorties + rayons Pokémon | fiches derrière Cloudflare : tout est lu sur les pages de liste ; prix en livres |
 | Play-In, JouéClub, La Grande Récré | `jsonld` | fiches produit que tu listes | Play-In interdit aux robots sa recherche : fiches uniquement |
 
 **Pas surveillés, volontairement** : Fnac et King Jouet (protection
@@ -802,7 +803,8 @@ pokeget/
 │       ├── philibert.py    Philibert
 │       ├── ultrajeux.py    UltraJeux
 │       ├── cultura.py      Cultura (API GraphQL publique de la boutique)
-│       └── carrefour.py    Carrefour
+│       ├── carrefour.py    Carrefour
+│       └── chaoscards.py   Chaos Cards
 └── tests/                  tests automatiques (sans Internet)
     └── fixtures/           extraits réels des pages des sites, pour les tests
 ```
