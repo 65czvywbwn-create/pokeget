@@ -389,6 +389,14 @@ class CulturaAdapter(RetailerAdapter):
     def parse_search(self, page: str) -> List[Product]:
         return [self.product(it) for it in self.items(page) if it.get("url_key")]
 
+    def gone(self, page: str) -> bool:
+        # Réponse valide mais sans aucun produit : la fiche a été retirée
+        # (l'ancienne adresse redirige alors vers l'accueil ou le rayon).
+        try:
+            return self.items(page) == []
+        except RuntimeError:
+            return False
+
     def parse_product(self, page: str, url: str) -> Optional[Product]:
         pid = self.pid_from_url(url)
         items = [it for it in self.items(page) if it.get("url_key") == pid]

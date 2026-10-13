@@ -190,6 +190,20 @@ class ParsingTests(unittest.TestCase):
         self.assertIsNone(parse_nuxt_product(page(True, True), url.replace("1034922", "1")))
 
 
+    def test_jsonld_escaped_description(self):
+        # JSON valide contenant des &quot; (Leclerc) + AggregateOffer sans offre
+        ld = ('{"@type":"Product","name":"Pokébox Q3 2025","description":"&lt;p&gt;&quot;x&quot;&lt;/p&gt;",'
+              '"offers":[{"@type":"Offer","url":"fp/x"},{"@type":"AggregateOffer","offerCount":0}]}')
+        info = parse_jsonld(f'<script type="application/ld+json">{ld}</script>')
+        self.assertEqual((info["name"], info["status"]), ("Pokébox Q3 2025", Status.OUT))
+
+    def test_cultura_gone(self):
+        from pokeget.adapters.cultura import CulturaAdapter
+        gone = CulturaAdapter.gone
+        self.assertTrue(gone(CulturaAdapter.__new__(CulturaAdapter), '{"data":{"products":{"items":[]}}}'))
+        self.assertFalse(gone(CulturaAdapter.__new__(CulturaAdapter), '<html>bloqué</html>'))
+        self.assertFalse(gone(CulturaAdapter.__new__(CulturaAdapter), '{"errors":[{"message":"x"}]}'))
+
     def test_chaoscards_listing(self):
         from pokeget.adapters.chaoscards import parse_listing
 
