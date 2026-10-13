@@ -90,6 +90,10 @@ class RetailerAdapter(Adapter):
         """Adresse lue pour revérifier un produit (sa fiche, sauf si l'enseigne a mieux)."""
         return product.url
 
+    def gone(self, page: str) -> bool:
+        """La réponse dit clairement que le produit n'existe plus (à préciser par enseigne)."""
+        return False
+
     def default_terms(self) -> List[str]:
         """Recherches par défaut : chaque mot-clé, précédé de « pokemon » s'il n'y est pas."""
         terms = []
@@ -136,6 +140,9 @@ class RetailerAdapter(Adapter):
             product.status = Status.OUT
             return product
         parsed = self.parse_product(resp.text, product.url)
+        if parsed is None and self.gone(resp.text):  # retiré du catalogue
+            product.status = Status.OUT
+            return product
         if parsed is None:
             self.log.warning("Fiche illisible (le site a peut-être changé) : %s", product.url)
             product.status = Status.UNKNOWN

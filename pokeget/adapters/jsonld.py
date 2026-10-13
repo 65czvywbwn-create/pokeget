@@ -94,9 +94,16 @@ def parse_jsonld(page: str) -> Optional[Dict[str, Any]]:
     """Extrait {name, status, price, seller, sku} de la meilleure offre, ou None."""
     products = []
     for raw in LD_RE.findall(page):
-        try:
-            data = json.loads(htmllib.unescape(raw.strip()) if "&quot;" in raw else raw.strip(), strict=False)
-        except ValueError:
+        # D'abord tel quel : dé-échapper un JSON valide casse les &quot; des
+        # descriptions (Leclerc) ; seulement ensuite la version dé-échappée.
+        data = None
+        for text in (raw.strip(), htmllib.unescape(raw.strip()) if "&quot;" in raw else None):
+            try:
+                data = json.loads(text, strict=False) if text else None
+            except ValueError:
+                continue
+            break
+        if data is None:
             continue
         products += [n for n in _walk(data) if _is_type(n, "Product") or _is_type(n, "ProductGroup")]
     if not products:
@@ -107,6 +114,8 @@ def parse_jsonld(page: str) -> Optional[Dict[str, Any]]:
         offers = _offers(prod) or [{}]
         for offer in offers:
             st = availability_to_status(offer.get("availability"))
+            if st == Status.UNKNOWN and offer.get("offerCount") in (0, "0"):
+                st = Status.OUT  # AggregateOffer sans aucune offre (Leclerc)
             if best is None or RANK[st] < RANK[best[0]]:
                 best = (st, prod, offer)
     assert best is not None
@@ -114,6 +123,8 @@ def parse_jsonld(page: str) -> Optional[Dict[str, Any]]:
     price = _price(offer.get("price") if offer.get("price") is not None else offer.get("lowPrice"))
     if price is None and isinstance(offer.get("priceSpecification"), dict):
         price = _price(offer["priceSpecification"].get("price"))
+    if price == 0:
+        price = None  # « 0 » = pas de prix (offre vide)
     return {
         "name": htmllib.unescape(str(prod.get("name") or "")).strip(),
         "status": status,
