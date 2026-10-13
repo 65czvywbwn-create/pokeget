@@ -11,6 +11,12 @@ from curl_cffi.requests import AsyncSession
 
 from pokeget.models import Product, Status, format_price
 
+
+def _price(p: Product) -> str:
+    """Prix tel qu'affiché par le site (ex. en livres), sinon en euros."""
+    return p.extra.get("prix_affiche") or format_price(p.price)
+
+
 log = logging.getLogger("pokeget.ntfy")
 
 MUTE_MINUTES = 60
@@ -70,7 +76,7 @@ class Notifier:
         }
 
     async def product_alert(self, p: Product, hkey: str) -> bool:
-        title = f"🟢 [{p.site}] {p.title}, {format_price(p.price)}"
+        title = f"🟢 [{p.site}] {p.title}, {_price(p)}"
         if p.status == Status.PREORDER:
             title += " (précommande)"
             lines = ["Précommande ouverte !"]
@@ -90,11 +96,11 @@ class Notifier:
         if len(products) == 1:
             p = products[0]
             title = f"🆕 [{site}] {p.title}"
-            lines = [f"Nouvelle fiche repérée ({p.status.value}, {format_price(p.price)})."]
+            lines = [f"Nouvelle fiche repérée ({p.status.value}, {_price(p)})."]
             click = p.url
         else:
             title = f"🆕 [{site}] {len(products)} nouvelles fiches"
-            lines = [f"• {p.title} ({p.status.value}, {format_price(p.price)})" for p in products[:8]]
+            lines = [f"• {p.title} ({p.status.value}, {_price(p)})" for p in products[:8]]
             if len(products) > 8:
                 lines.append(f"… et {len(products) - 8} autre(s)")
             click = None

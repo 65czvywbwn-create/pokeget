@@ -315,6 +315,16 @@ sites:
     actif: true
     intervalle: 300
 
+  # Chaos Cards (Royaume-Uni) : fiches derrière Cloudflare, on lit les pages
+  # de liste (calendrier des sorties + rayons Pokémon). Prix en livres,
+  # convertis en euros (taux_livre_euro, 1,15 par défaut) pour les prix_max.
+  - nom: "Chaos Cards"
+    type: chaoscards
+    domaine: "www.chaoscards.co.uk"
+    actif: true
+    sans_prix_max: true   # UPC 30 ans à 169,99 £ : prévenu à l'ouverture des précommandes
+    intervalle: 90
+
   # ----- Enseignes NON surveillées (anti-robot) -----
   # Fnac, King Jouet (DataDome), Amazon (AWS WAF), Cdiscount (Baleen),
   # Micromania et Pokémon Center (Imperva) bloquent les programmes
